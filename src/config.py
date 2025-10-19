@@ -17,8 +17,10 @@ class Config:
     API_TIMEOUT = 30
     SCRAPE_INTERVAL = 300  # 5 minutes
 
-    # Hell Divers 2 API Endpoints
+    # Hell Divers 2 API Endpoints (Community-maintained at api.helldivers2.dev)
     HELLDIVERS_API_BASE = os.getenv("HELLDIVERS_API_BASE", "NA")
+    HELLDIVERS_API_CLIENT_NAME = os.getenv("HELLDIVERS_API_CLIENT_NAME", "NA")
+    HELLDIVERS_API_CONTACT = os.getenv("HELLDIVERS_API_CONTACT", "NA")
 
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

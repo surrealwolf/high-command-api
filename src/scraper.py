@@ -7,39 +7,66 @@ logger = logging.getLogger(__name__)
 
 
 class HellDivers2Scraper:
-    """Scraper for Hell Divers 2 game data"""
+    """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)"""
 
-    DEFAULT_BASE_URL = "https://api.live.prod.theadultswim.com/helldivers2"
+    DEFAULT_BASE_URL = "https://api.helldivers2.dev/api/v1"
 
     def __init__(self, timeout: int = 30, base_url: Optional[str] = None):
         self.timeout = timeout
-        # Use provided URL, config URL, or fallback to default
-        config_url = Config.HELLDIVERS_API_BASE
-        if config_url == "NA":
-            self.base_url = base_url or self.DEFAULT_BASE_URL
-        else:
-            self.base_url = base_url or config_url
+        # Use provided URL or config URL, fallback to default
+        base_url_config = Config.HELLDIVERS_API_BASE if Config.HELLDIVERS_API_BASE != "NA" else None
+        self.base_url = base_url or base_url_config or self.DEFAULT_BASE_URL
+        
+        # Get headers from config, use "NA" if not configured
+        client_name = Config.HELLDIVERS_API_CLIENT_NAME if Config.HELLDIVERS_API_CLIENT_NAME != "NA" else "HighCommand"
+        contact = Config.HELLDIVERS_API_CONTACT if Config.HELLDIVERS_API_CONTACT != "NA" else "admin@example.com"
+        
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": "High-Command API/1.0"})
+        self.session.headers.update({
+            "User-Agent": "High-Command API/1.0",
+            "X-Super-Client": client_name,
+            "X-Super-Contact": contact,
+        })
+        logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
 
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
         try:
-            response = self.session.get(f"{self.base_url}/status", timeout=self.timeout)
+            response = self.session.get(f"{self.base_url}/war", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
             logger.error(f"Failed to fetch war status: {e}")
             return None
 
-    def get_campaign_info(self) -> Optional[Dict]:
-        """Fetch campaign information"""
+    def get_campaign_info(self) -> Optional[List[Dict]]:
+        """Fetch active campaigns information"""
         try:
             response = self.session.get(f"{self.base_url}/campaigns", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
             logger.error(f"Failed to fetch campaign info: {e}")
+            return None
+
+    def get_assignments(self) -> Optional[List[Dict]]:
+        """Fetch current assignments (Major Orders)"""
+        try:
+            response = self.session.get(f"{self.base_url}/assignments", timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Failed to fetch assignments: {e}")
+            return None
+
+    def get_dispatches(self) -> Optional[List[Dict]]:
+        """Fetch news dispatches and announcements"""
+        try:
+            response = self.session.get(f"{self.base_url}/dispatches", timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Failed to fetch dispatches: {e}")
             return None
 
     def get_planets(self) -> Optional[List[Dict]]:
@@ -65,31 +92,52 @@ class HellDivers2Scraper:
             return None
 
     def get_statistics(self) -> Optional[Dict]:
-        """Fetch global game statistics"""
+        """Fetch global game statistics (part of war status)"""
         try:
-            response = self.session.get(f"{self.base_url}/statistics", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
+            # Statistics are included in war status, return the statistics subset
+            war_data = self.get_war_status()
+            if war_data and "statistics" in war_data:
+                return war_data["statistics"]
+            return None
         except requests.RequestException as e:
             logger.error(f"Failed to fetch statistics: {e}")
             return None
 
-    def get_factions(self) -> Optional[List[Dict]]:
-        """Fetch all factions"""
+    def get_planet_events(self) -> Optional[List[Dict]]:
+        """Fetch planet events"""
         try:
-            response = self.session.get(f"{self.base_url}/factions", timeout=self.timeout)
+            response = self.session.get(f"{self.base_url}/planet-events", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
+        except requests.RequestException as e:
+            logger.error(f"Failed to fetch planet events: {e}")
+            return None
+
+    def get_factions(self) -> Optional[List[str]]:
+        """Fetch all factions (from war data)"""
+        try:
+            war_data = self.get_war_status()
+            if war_data and "factions" in war_data:
+                return war_data["factions"]
+            return None
         except requests.RequestException as e:
             logger.error(f"Failed to fetch factions: {e}")
             return None
 
     def get_biomes(self) -> Optional[List[Dict]]:
-        """Fetch all biomes"""
+        """Fetch all biomes from planets data"""
         try:
-            response = self.session.get(f"{self.base_url}/biomes", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
+            planets = self.get_planets()
+            if not planets:
+                return None
+            # Extract unique biomes from planets
+            biomes = {}
+            for planet in planets:
+                if "biome" in planet:
+                    biome_name = planet["biome"].get("name")
+                    if biome_name and biome_name not in biomes:
+                        biomes[biome_name] = planet["biome"]
+            return list(biomes.values()) if biomes else None
         except requests.RequestException as e:
             logger.error(f"Failed to fetch biomes: {e}")
             return None
