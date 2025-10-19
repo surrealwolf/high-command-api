@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "high-command-api"
+version = "1.0.0"
+description = "Production-ready FastAPI application for Hell Divers 2 game data scraping"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Lee Chapman", email = "lee@fullmetal.dev"}
+]
+keywords = ["helldivers", "api", "scraper", "fastapi"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "APScheduler>=3.10.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.7.0",
+    "ruff>=0.0.280",
+    "mypy>=1.4.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/surrealwolf/high-command-api"
+Documentation = "https://github.com/surrealwolf/high-command-api/tree/main/docs"
+Repository = "https://github.com/surrealwolf/high-command-api.git"
+Issues = "https://github.com/surrealwolf/high-command-api/issues"
+
+[tool.setuptools]
+packages = ["src", "tests"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312', 'py313', 'py314']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "demo.py"]
+addopts = "-v --cov=src --cov-report=xml --cov-report=html"
+asyncio_mode = "auto"
