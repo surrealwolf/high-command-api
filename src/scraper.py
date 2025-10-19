@@ -16,17 +16,27 @@ class HellDivers2Scraper:
         # Use provided URL or config URL, fallback to default
         base_url_config = Config.HELLDIVERS_API_BASE if Config.HELLDIVERS_API_BASE != "NA" else None
         self.base_url = base_url or base_url_config or self.DEFAULT_BASE_URL
-        
+
         # Get headers from config, use "NA" if not configured
-        client_name = Config.HELLDIVERS_API_CLIENT_NAME if Config.HELLDIVERS_API_CLIENT_NAME != "NA" else "HighCommand"
-        contact = Config.HELLDIVERS_API_CONTACT if Config.HELLDIVERS_API_CONTACT != "NA" else "admin@example.com"
-        
+        client_name = (
+            Config.HELLDIVERS_API_CLIENT_NAME
+            if Config.HELLDIVERS_API_CLIENT_NAME != "NA"
+            else "HighCommand"
+        )
+        contact = (
+            Config.HELLDIVERS_API_CONTACT
+            if Config.HELLDIVERS_API_CONTACT != "NA"
+            else "admin@example.com"
+        )
+
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "High-Command API/1.0",
-            "X-Super-Client": client_name,
-            "X-Super-Contact": contact,
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": "High-Command API/1.0",
+                "X-Super-Client": client_name,
+                "X-Super-Contact": contact,
+            }
+        )
         logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
 
     def get_war_status(self) -> Optional[Dict]:
