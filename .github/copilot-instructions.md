@@ -79,7 +79,7 @@
 2. Add database storage method in `database.py` using `INSERT INTO` or `UPDATE` with JSON serialization for complex data
 3. Create API endpoint in `app.py` with proper tag, docstring, and error handling
 4. Add to `collector.py`'s `collect_all_data()` if background collection needed (typical pattern)
-5. Test with `demo.py` by adding mocked test functions using `@patch("requests.get")` or `@patch("requests.post")`
+5. Test with `demo.py` by adding mocked test functions using `@patch("requests.Session.request")` or patching the exact import path used in `scraper.py` to reliably intercept all HTTP calls
 
 ### Database Conventions
 - **Never break existing code**: Create new tables if schema change needed; old tables stay for backward compatibility
