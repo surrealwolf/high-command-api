@@ -80,11 +80,17 @@ async def refresh_war_status():
 
 @app.get("/api/campaigns", tags=["Campaigns"])
 async def get_campaigns():
-    """Get campaign information"""
+    """Get campaign information (with cache fallback)"""
+    # Try live API first
     data = scraper.get_campaign_info()
+    
+    # Fallback to cache if live API fails
+    if not data:
+        data = db.get_latest_campaigns_snapshot()
+    
     if data:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch campaigns")
+    raise HTTPException(status_code=503, detail="Failed to fetch campaigns and no cached data available")
 
 
 @app.get("/api/campaigns/active", tags=["Campaigns"])
@@ -103,20 +109,34 @@ async def get_active_campaigns():
 
 @app.get("/api/planets", tags=["Planets"])
 async def get_planets():
-    """Get all planets"""
+    """Get all planets (with cache fallback)"""
+    # Try live API first
     data = scraper.get_planets()
+    
+    # Fallback to cache if live API fails
+    if not data:
+        data = db.get_latest_planets_snapshot()
+    
     if data:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch planets")
+    raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}", tags=["Planets"])
 async def get_planet_status(planet_index: int):
-    """Get status of a specific planet"""
+    """Get status of a specific planet (with cache fallback)"""
+    # Try live API first
     data = collector.collect_planet_data(planet_index)
+    
+    # Fallback to cache if live API fails
+    if not data:
+        history = db.get_planet_status_history(planet_index, limit=1)
+        if history:
+            data = history[0].get("data") if isinstance(history[0], dict) and "data" in history[0] else history[0]
+    
     if data:
         return data
-    raise HTTPException(status_code=404, detail=f"Failed to fetch planet {planet_index}")
+    raise HTTPException(status_code=503, detail=f"Failed to fetch planet {planet_index} and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}/history", tags=["Planets"])
@@ -168,11 +188,17 @@ async def refresh_statistics():
 
 @app.get("/api/factions", tags=["Factions"])
 async def get_factions():
-    """Get all factions"""
+    """Get all factions (with cache fallback)"""
+    # Try live API first
     data = scraper.get_factions()
+    
+    # Fallback to cache if live API fails
+    if not data:
+        data = db.get_latest_factions_snapshot()
+    
     if data:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch factions")
+    raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
 
 
 # ========================
@@ -182,11 +208,17 @@ async def get_factions():
 
 @app.get("/api/biomes", tags=["Biomes"])
 async def get_biomes():
-    """Get all biomes"""
+    """Get all biomes (with cache fallback)"""
+    # Try live API first
     data = scraper.get_biomes()
+    
+    # Fallback to cache if live API fails
+    if not data:
+        data = db.get_latest_biomes_snapshot()
+    
     if data:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch biomes")
+    raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
 
 
 # ========================
