@@ -54,7 +54,7 @@
 
 ### Core Components
 1. **app.py** (`src/app.py` - 205 lines): FastAPI application with 30+ endpoints organized by tags (War, Planets, Statistics, Campaigns, Factions, Biomes, System)
-2. **scraper.py** (`src/scraper.py` - 158 lines): HTTP client for Hell Divers 2 community API with 10 methods: `get_war_status()`, `get_planets()`, `get_statistics()`, `get_factions()`, `get_biomes()`, `get_campaign_info()`, `get_assignments()`, `get_dispatches()`, `get_planet_events()`, `get_planet_status()`
+2. **scraper.py** (`src/scraper.py` - 175 lines): HTTP client for Hell Divers 2 community API with rate limiting (2 second delay between requests to stay within 5 requests/10 seconds limit). 10 methods: `get_war_status()`, `get_planets()`, `get_statistics()`, `get_factions()`, `get_biomes()`, `get_campaign_info()`, `get_assignments()`, `get_dispatches()`, `get_planet_events()`, `get_planet_status()`
 3. **database.py** (`src/database.py` - 360 lines): SQLite manager with 7 tables (war_status, statistics, planet_status, campaigns, assignments, dispatches, planet_events) + indexes for fast queries
 4. **collector.py** (`src/collector.py` - 109 lines): APScheduler-based background task runner that calls `collect_all_data()` every 5 minutes (300s) during app lifecycle, collecting all data types with proper error handling
 5. **config.py** (`src/config.py` - 57 lines): Environment-based configuration with support for custom API URLs and headers, DevelopmentConfig (1-minute intervals) vs ProductionConfig (5-minute intervals)
@@ -97,6 +97,14 @@
 - **Database Level**: Use try/except with sqlite3.connect(), rollback on failure
 - **API Level**: Raise `HTTPException(status_code, detail="message")` for client errors
 - **Logging**: Use configured logger with module-specific `logger = logging.getLogger(__name__)`
+
+### Rate Limiting
+- **Community API Limit**: 5 requests per 10 seconds (enforced by api.helldivers2.dev)
+- **Implementation**: Scraper uses 2-second delay between requests (`_rate_limit()` method)
+- **Method**: Tracks `last_request_time`, sleeps if elapsed time < `request_delay`
+- **Application**: All 10 scraper methods call `self._rate_limit()` before HTTP requests
+- **Logging**: Debug level logs when rate limiting delay is applied
+- **Graceful Degradation**: If rate limit exceeded (429 error), collector logs error and continues with next collection cycle
 
 ### Dependencies & Tools Evolution
 - **Linter Shift**: Replaced `flake8` with `ruff` (faster, more rules, auto-fix support)
