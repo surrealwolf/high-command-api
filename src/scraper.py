@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class HellDivers2Scraper:
     """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)
     
-    Rate limiting: 5 requests per 10 seconds (0.5 seconds between requests recommended)
+    Rate limiting: 5 requests per 10 seconds (2.0 seconds between requests enforced)
     """
 
     def __init__(self, timeout: int = 30, base_url: Optional[str] = None):
