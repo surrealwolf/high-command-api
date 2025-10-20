@@ -1,7 +1,12 @@
 # High Command API - AI Coding Agent Instructions
 
 ## Project Overview
-**Hell Divers 2 API**: Production-ready FastAPI application for real-time scraping and tracking of Hell Divers 2 game data. The system continuously collects war status, planet information, campaigns, statistics, and faction data via background tasks and serves them through a comprehensive REST API.
+**Hell Divers 2 API**: Production-ready FastAPI application for real-time scraping and tracking of Hell Divers 2 game data. The system continuously collects war status, planet information, campaigns, major orders, dispatches, planet events, statistics, and faction data via background tasks and serves them through a comprehensive REST API.
+
+**API Source**: Community-maintained Hell Divers 2 API at `https://api.helldivers2.dev/api/v1` (257⭐ GitHub, actively maintained)
+- Rate limit: 5 requests per 10 seconds
+- Required headers: X-Super-Client, X-Super-Contact
+- Status: Live and actively maintained with real-time data
 
 ## Environment & Build Setup
 
@@ -24,16 +29,18 @@
 
 ### Core Components
 1. **app.py** (`src/app.py` - 205 lines): FastAPI application with 30+ endpoints organized by tags (War, Planets, Statistics, Campaigns, Factions, Biomes, System)
-2. **scraper.py** (`src/scraper.py` - 115 lines): HTTP client wrapping Hell Divers 2 API (`https://api.live.prod.theadultswim.com/helldivers2`) with methods like `get_war_status()`, `get_planets()`, `get_statistics()`
-3. **database.py** (`src/database.py` - 228 lines): SQLite manager with 4 main tables (war_status, statistics, planet_status, campaigns) + indexes for fast historical queries
-4. **collector.py** (`src/collector.py` - 97 lines): APScheduler-based background task runner that calls `collect_all_data()` every 5 minutes (300s) during app lifecycle
-5. **config.py** (`src/config.py` - 41 lines): Environment-based configuration with DevelopmentConfig (1-minute intervals) vs ProductionConfig (5-minute intervals)
+2. **scraper.py** (`src/scraper.py` - 158 lines): HTTP client for Hell Divers 2 community API with 10 methods: `get_war_status()`, `get_planets()`, `get_statistics()`, `get_factions()`, `get_biomes()`, `get_campaign_info()`, `get_assignments()`, `get_dispatches()`, `get_planet_events()`, `get_planet_status()`
+3. **database.py** (`src/database.py` - 360 lines): SQLite manager with 7 tables (war_status, statistics, planet_status, campaigns, assignments, dispatches, planet_events) + indexes for fast queries
+4. **collector.py** (`src/collector.py` - 109 lines): APScheduler-based background task runner that calls `collect_all_data()` every 5 minutes (300s) during app lifecycle, collecting all data types with proper error handling
+5. **config.py** (`src/config.py` - 57 lines): Environment-based configuration with support for custom API URLs and headers, DevelopmentConfig (1-minute intervals) vs ProductionConfig (5-minute intervals)
 
 ### Lifecycle & Integration
 - **Startup**: `lifespan()` context manager in app.py starts `collector.start()`, which launches APScheduler
-- **Data Flow**: Collector → Scraper → (HTTP to Hell Divers 2 API) → Parser → Database → API endpoints
+- **Data Flow**: Collector → Scraper → (HTTP to Hell Divers 2 Community API) → Parser → Database → API endpoints
 - **Error Handling**: Scraper returns `None` on failures with logged exceptions; endpoints raise `HTTPException(404/500)` when data unavailable
 - **JSON Storage**: Complex nested objects stored as TEXT in database with `json.dumps()` for retrieval
+- **Configuration**: API base URL is read from `Config.HELLDIVERS_API_BASE` (no hardcoded fallback)
+- **Headers**: X-Super-Client and X-Super-Contact headers automatically added to all API requests
 
 ## Key Patterns & Conventions
 
@@ -59,8 +66,9 @@
 ### Dependencies & Tools Evolution
 - **Linter Shift**: Replaced `flake8` with `ruff` (faster, more rules, auto-fix support)
 - **Code Formatting**: Uses `black` (100 char line length) with `ruff format`
-- **Type Checking**: `mypy` (Python 3.9+ compatible) with `ignore_missing_imports` enabled
-- **Testing**: `pytest` with `pytest-asyncio` for async test support and `pytest-cov` for coverage
+- **Type Checking**: `mypy` (Python 3.9+ compatible) with `ignore_missing_imports` enabled; requires `types-requests` for http library stubs
+- **Testing**: `pytest` with `pytest-asyncio` for async test support, `pytest-cov` for coverage, and `unittest.mock` for mocking HTTP requests
+- **Test Approach**: Unit tests use `@patch()` to mock external API calls, eliminating server dependency and enabling fast CI/CD execution
 - **Test Output**: Generates `coverage.xml` (for CI upload) and HTML reports
 - **Coverage Tracking**: Codecov integration via GitHub Actions (non-blocking failures)
 
@@ -71,19 +79,24 @@
 2. Add database storage method in `database.py` using `INSERT INTO` or `UPDATE` with JSON serialization for complex data
 3. Create API endpoint in `app.py` with proper tag, docstring, and error handling
 4. Add to `collector.py`'s `collect_all_data()` if background collection needed (typical pattern)
-5. Test with `demo.py` by adding test functions to the class
+5. Test with `demo.py` by adding mocked test functions using `@patch("requests.get")` or `@patch("requests.post")`
 
-### Modifying Database Schema
+### Database Conventions
 - **Never break existing code**: Create new tables if schema change needed; old tables stay for backward compatibility
-- **Always add indexes** on columns used in WHERE or ORDER BY clauses
+- **Always add indexes** on columns used in WHERE or ORDER BY clauses (e.g., `CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)`)
 - **Use JSON TEXT** for nested/variable data to avoid schema sprawl
+- **Auto-incrementing IDs**: `id INTEGER PRIMARY KEY AUTOINCREMENT` on all tables
+- **Timestamps**: Every row gets `timestamp DATETIME DEFAULT CURRENT_TIMESTAMP`
 - **Migration**: No migration system in place; manual database backup recommended before schema changes
+- **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT OR REPLACE` for idempotency
 
 ### Adding New Collectors
-- Add method to `scraper.py` following existing patterns (session timeout, User-Agent headers)
+- Add method to `scraper.py` following existing patterns (session timeout, User-Agent headers, X-Super-Client/X-Super-Contact headers)
+- Add corresponding database save method in `database.py` 
 - Register in `collector.py`'s `collect_all_data()` with try/except and logging
 - Ensure idempotent: safe to run every 5 minutes without side effects
-- Include logging before and after: `logger.info(f"Collected data for X items")`
+- Include logging before and after: `logger.info(f"Collected X items")`
+- Use `save_*()` methods for data persistence (don't just log collection without storage)
 
 ### Dependencies
 - **Framework**: FastAPI 0.104.1, Uvicorn 0.24.0
@@ -91,6 +104,8 @@
 - **HTTP**: Requests 2.31.0 with session reuse and 30-second timeout
 - **Database**: SQLite3 (built-in); no ORM used—raw SQL with sqlite3 module
 - **Config**: python-dotenv 1.0.0 for environment variables
+- **Type Checking**: types-requests 2.32.4+ for mypy type stubs
+- **Testing**: pytest 8.8.2, pytest-asyncio, pytest-cov with unittest.mock for mocking
 
 ## Critical Workflows
 
@@ -142,6 +157,8 @@ make run                # Runs: python -m uvicorn src.app:app --host 0.0.0.0 --p
 - ❌ **Missing error context**: Log full exceptions with `logger.error(f"...: {e}")` for debugging
 - ❌ **Hardcoded values**: Use config.py for timeouts (30s), intervals (300s), API URLs
 - ❌ **Assuming data exists**: Always check `if data:` before processing; scraper methods return `None` on failure
+- ❌ **Missing database persistence**: New collectors must call `db.save_*()` methods, not just log
+- ❌ **Unsafe nested dict access**: Always check nested keys before accessing (e.g., `campaign.get("planet")` before `campaign["planet"]["index"]`)
 
 ## File Map for Quick Reference
 | Component | File | Purpose |
@@ -150,11 +167,11 @@ make run                # Runs: python -m uvicorn src.app:app --host 0.0.0.0 --p
 | Project Config | `pyproject.toml` | Build system, dependencies, tool config (ruff, mypy, pytest) |
 | Makefile | `Makefile` | Bash-based dev/prod/docker/lint targets (aligned with MCP) |
 | API Routes | `src/app.py` | 30+ FastAPI endpoints with lifecycle management |
-| Data Fetching | `src/scraper.py` | HTTP client for Hell Divers 2 API |
-| Persistence | `src/database.py` | SQLite schema + CRUD operations |
+| Data Fetching | `src/scraper.py` | HTTP client for Hell Divers 2 API with 10 methods |
+| Persistence | `src/database.py` | SQLite schema with 7 tables + CRUD operations |
 | Scheduling | `src/collector.py` | APScheduler background tasks (5-minute cycle) |
 | Settings | `src/config.py` | Environment-based configuration classes |
-| Integration Tests | `tests/demo.py` | 350+ lines of colored endpoint tests |
-| CI/CD Workflows | `.github/workflows/` | tests.yml, docker.yml, auto-approve.yml |
+| Unit Tests | `tests/demo.py` | 11 mocked unit tests (no server dependency) |
+| CI/CD Workflows | `.github/workflows/` | tests.yml, docker.yml, auto-approve.yml, auto-assign.yml |
 | AI Instructions | `.github/copilot-instructions.md` | This file (aligned with MCP project) |
 | Documentation | `DEVELOPMENT.md` | Architecture & design decisions |
