@@ -72,6 +72,42 @@ class Database:
             """
             )
 
+            # Assignments table (Major Orders)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS assignments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    assignment_id INTEGER UNIQUE,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    data TEXT NOT NULL
+                )
+            """
+            )
+
+            # Dispatches table (News/Announcements)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS dispatches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dispatch_id INTEGER UNIQUE,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    data TEXT NOT NULL
+                )
+            """
+            )
+
+            # Planet events table
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS planet_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id INTEGER UNIQUE,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    data TEXT NOT NULL
+                )
+            """
+            )
+
             # Index for faster queries
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_war_timestamp ON war_status(timestamp)")
             cursor.execute(
@@ -80,6 +116,9 @@ class Database:
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_planet_index ON planet_status(planet_index)"
             )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_timestamp ON dispatches(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_timestamp ON planet_events(timestamp)")
 
             conn.commit()
 
@@ -217,4 +256,103 @@ class Database:
                 return [json.loads(row[0]) for row in results]
         except Exception as e:
             logger.error(f"Failed to get active campaigns: {e}")
+            return []
+
+    def save_assignments(self, data: List[Dict]) -> bool:
+        """Save assignments (Major Orders) to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for assignment in data:
+                    assignment_id = assignment.get("id")
+                    if assignment_id:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO assignments (assignment_id, data) VALUES (?, ?)",
+                            (assignment_id, json.dumps(assignment)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save assignments: {e}")
+            return False
+
+    def save_dispatches(self, data: List[Dict]) -> bool:
+        """Save dispatches (news/announcements) to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for dispatch in data:
+                    dispatch_id = dispatch.get("id")
+                    if dispatch_id:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO dispatches (dispatch_id, data) VALUES (?, ?)",
+                            (dispatch_id, json.dumps(dispatch)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save dispatches: {e}")
+            return False
+
+    def save_planet_events(self, data: List[Dict]) -> bool:
+        """Save planet events to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for event in data:
+                    event_id = event.get("id")
+                    if event_id:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO planet_events (event_id, data) VALUES (?, ?)",
+                            (event_id, json.dumps(event)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save planet events: {e}")
+            return False
+
+    def get_latest_assignments(self, limit: int = 10) -> List[Dict]:
+        """Get latest assignments"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data FROM assignments ORDER BY timestamp DESC LIMIT ?",
+                    (limit,),
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get latest assignments: {e}")
+            return []
+
+    def get_latest_dispatches(self, limit: int = 10) -> List[Dict]:
+        """Get latest dispatches"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data FROM dispatches ORDER BY timestamp DESC LIMIT ?",
+                    (limit,),
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get latest dispatches: {e}")
+            return []
+
+    def get_latest_planet_events(self, limit: int = 10) -> List[Dict]:
+        """Get latest planet events"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data FROM planet_events ORDER BY timestamp DESC LIMIT ?",
+                    (limit,),
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get latest planet events: {e}")
             return []

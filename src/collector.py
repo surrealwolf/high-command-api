@@ -49,7 +49,7 @@ class DataCollector:
                 self.db.save_war_status(war_data)
                 logger.info("War status collected")
 
-            # Collect statistics
+            # Collect statistics (extracted from war status)
             stats_data = self.scraper.get_statistics()
             if stats_data:
                 self.db.save_statistics(stats_data)
@@ -69,10 +69,28 @@ class DataCollector:
             if campaigns:
                 for campaign in campaigns:
                     campaign_id = campaign.get("id")
-                    planet_index = campaign.get("planet_index")
-                    if campaign_id and planet_index:
+                    if campaign_id and campaign.get("planet") and "index" in campaign["planet"]:
+                        planet_index = campaign["planet"].get("index")
                         self.db.save_campaign(campaign_id, planet_index, campaign)
                 logger.info(f"Collected {len(campaigns)} campaigns")
+
+            # Collect assignments (Major Orders)
+            assignments = self.scraper.get_assignments()
+            if assignments:
+                self.db.save_assignments(assignments)
+                logger.info(f"Collected {len(assignments)} assignments")
+
+            # Collect dispatches (news)
+            dispatches = self.scraper.get_dispatches()
+            if dispatches:
+                self.db.save_dispatches(dispatches)
+                logger.info(f"Collected {len(dispatches)} dispatches")
+
+            # Collect planet events
+            events = self.scraper.get_planet_events()
+            if events is not None:
+                self.db.save_planet_events(events)
+                logger.info(f"Collected {len(events)} planet events")
 
             logger.info("Data collection cycle completed successfully")
 
