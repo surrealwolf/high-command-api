@@ -69,7 +69,7 @@ class DataCollector:
             if campaigns:
                 for campaign in campaigns:
                     campaign_id = campaign.get("id")
-                    if campaign_id and "planet" in campaign:
+                    if campaign_id and campaign.get("planet") and "index" in campaign["planet"]:
                         planet_index = campaign["planet"].get("index")
                         self.db.save_campaign(campaign_id, planet_index, campaign)
                 logger.info(f"Collected {len(campaigns)} campaigns")
