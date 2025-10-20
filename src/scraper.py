@@ -1,5 +1,6 @@
 import requests
 import logging
+import time
 from typing import Dict, List, Optional
 from src.config import Config
 
@@ -7,12 +8,19 @@ logger = logging.getLogger(__name__)
 
 
 class HellDivers2Scraper:
-    """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)"""
+    """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)
+    
+    Rate limiting: 5 requests per 10 seconds (0.5 seconds between requests recommended)
+    """
 
     def __init__(self, timeout: int = 30, base_url: Optional[str] = None):
         self.timeout = timeout
         # Use provided URL or config URL
         self.base_url = base_url or Config.HELLDIVERS_API_BASE
+        
+        # Rate limiting: delay between requests (2 seconds for 5 requests in 10 seconds)
+        self.request_delay = 2.0
+        self.last_request_time = 0
 
         # Get headers from config, use "NA" if not configured
         client_name = (
@@ -35,10 +43,20 @@ class HellDivers2Scraper:
             }
         )
         logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
+    
+    def _rate_limit(self):
+        """Enforce rate limiting between requests"""
+        elapsed = time.time() - self.last_request_time
+        if elapsed < self.request_delay:
+            delay = self.request_delay - elapsed
+            logger.debug(f"Rate limiting: sleeping for {delay:.2f}s")
+            time.sleep(delay)
+        self.last_request_time = time.time()
 
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/war", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -49,6 +67,7 @@ class HellDivers2Scraper:
     def get_campaign_info(self) -> Optional[List[Dict]]:
         """Fetch active campaigns information"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/campaigns", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -59,6 +78,7 @@ class HellDivers2Scraper:
     def get_assignments(self) -> Optional[List[Dict]]:
         """Fetch current assignments (Major Orders)"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/assignments", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -69,6 +89,7 @@ class HellDivers2Scraper:
     def get_dispatches(self) -> Optional[List[Dict]]:
         """Fetch news dispatches and announcements"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/dispatches", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -79,6 +100,7 @@ class HellDivers2Scraper:
     def get_planets(self) -> Optional[List[Dict]]:
         """Fetch all planets information"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/planets", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -89,6 +111,7 @@ class HellDivers2Scraper:
     def get_planet_status(self, planet_index: int) -> Optional[Dict]:
         """Fetch status of a specific planet"""
         try:
+            self._rate_limit()
             response = self.session.get(
                 f"{self.base_url}/planets/{planet_index}", timeout=self.timeout
             )
@@ -113,6 +136,7 @@ class HellDivers2Scraper:
     def get_planet_events(self) -> Optional[List[Dict]]:
         """Fetch planet events"""
         try:
+            self._rate_limit()
             response = self.session.get(f"{self.base_url}/planet-events", timeout=self.timeout)
             response.raise_for_status()
             return response.json()
