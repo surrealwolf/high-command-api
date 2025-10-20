@@ -171,7 +171,7 @@ make run                # Runs: python -m uvicorn src.app:app --host 0.0.0.0 --p
 | Persistence | `src/database.py` | SQLite schema with 7 tables + CRUD operations |
 | Scheduling | `src/collector.py` | APScheduler background tasks (5-minute cycle) |
 | Settings | `src/config.py` | Environment-based configuration classes |
-| Unit Tests | `tests/demo.py` | 11 mocked unit tests (no server dependency) |
+| Unit Tests | `tests/demo.py` | mocked unit tests (no server dependency) |
 | CI/CD Workflows | `.github/workflows/` | tests.yml, docker.yml, auto-approve.yml, auto-assign.yml |
 | AI Instructions | `.github/copilot-instructions.md` | This file (aligned with MCP project) |
 | Documentation | `DEVELOPMENT.md` | Architecture & design decisions |
