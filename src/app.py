@@ -228,8 +228,15 @@ async def get_biomes():
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "collector_running": collector.is_running}
+    """Health check endpoint with upstream API status"""
+    # Check if upstream API is reachable
+    upstream_status = scraper.get_war_status() is not None
+    
+    return {
+        "status": "healthy",
+        "collector_running": collector.is_running,
+        "upstream_api": "online" if upstream_status else "offline",
+    }
 
 
 # ========================
