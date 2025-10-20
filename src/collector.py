@@ -41,11 +41,16 @@ class DataCollector:
     def collect_all_data(self):
         """Collect all available data"""
         logger.info("Starting data collection cycle")
+        
+        # Track success/failure counts
+        success_count = 0
+        failure_count = 0
 
         try:
             # Collect war status (this includes statistics)
             war_data = self.scraper.get_war_status()
             if war_data:
+                success_count += 1
                 self.db.save_war_status(war_data)
                 logger.info("War status collected")
                 
@@ -55,49 +60,80 @@ class DataCollector:
                     self.db.save_statistics(stats_data)
                     logger.info("Statistics collected")
             else:
-                logger.info("Failed to collect war status and statistics")
+                failure_count += 1
+                logger.warning("Failed to collect war status and statistics")
 
             # Collect planets
             planets = self.scraper.get_planets()
             if planets:
+                success_count += 1
                 for planet in planets:
                     planet_index = planet.get("index")
                     if planet_index:
                         self.db.save_planet_status(planet_index, planet)
                 logger.info(f"Collected data for {len(planets)} planets")
+            else:
+                failure_count += 1
+                logger.warning("Failed to collect planets")
 
             # Collect campaigns
             campaigns = self.scraper.get_campaign_info()
             if campaigns:
+                success_count += 1
                 for campaign in campaigns:
                     campaign_id = campaign.get("id")
                     if campaign_id and campaign.get("planet") and "index" in campaign["planet"]:
                         planet_index = campaign["planet"].get("index")
                         self.db.save_campaign(campaign_id, planet_index, campaign)
                 logger.info(f"Collected {len(campaigns)} campaigns")
+            else:
+                failure_count += 1
+                logger.warning("Failed to collect campaigns")
 
             # Collect assignments (Major Orders)
             assignments = self.scraper.get_assignments()
             if assignments:
+                success_count += 1
                 self.db.save_assignments(assignments)
                 logger.info(f"Collected {len(assignments)} assignments")
+            else:
+                failure_count += 1
+                logger.warning("Failed to collect assignments")
 
             # Collect dispatches (news)
             dispatches = self.scraper.get_dispatches()
             if dispatches:
+                success_count += 1
                 self.db.save_dispatches(dispatches)
                 logger.info(f"Collected {len(dispatches)} dispatches")
+            else:
+                failure_count += 1
+                logger.warning("Failed to collect dispatches")
 
             # Collect planet events
             events = self.scraper.get_planet_events()
             if events is not None:
+                success_count += 1
                 self.db.save_planet_events(events)
                 logger.info(f"Collected {len(events)} planet events")
+            else:
+                failure_count += 1
+                logger.warning("Failed to collect planet events")
 
-            logger.info("Data collection cycle completed successfully")
+            # Update upstream API status: online only if all/most endpoints succeeded
+            # Mark offline if more than 2 endpoints failed (tolerance for occasional failures)
+            upstream_available = failure_count <= 2
+            self.scraper.set_upstream_status(upstream_available)
+            
+            if upstream_available:
+                logger.info(f"Data collection cycle completed: {success_count} succeeded, {failure_count} failed (API online)")
+            else:
+                logger.warning(f"Data collection cycle completed: {success_count} succeeded, {failure_count} failed (API marked offline)")
 
         except Exception as e:
             logger.error(f"Error during data collection: {e}")
+            # Mark upstream as unavailable on exception
+            self.scraper.set_upstream_status(False)
 
     def collect_planet_data(self, planet_index: int):
         """Collect data for a specific planet"""

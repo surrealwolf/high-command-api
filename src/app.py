@@ -229,8 +229,9 @@ async def get_biomes():
 @app.get("/api/health", tags=["Health"])
 async def health_check():
     """Health check endpoint with upstream API status"""
-    # Check if upstream API is reachable
-    upstream_status = scraper.get_war_status() is not None
+    # Get cached upstream API status (set during data collection cycle)
+    # No extra API call needed - this is just reading the cached status
+    upstream_status = scraper.is_upstream_available()
     
     return {
         "status": "healthy",

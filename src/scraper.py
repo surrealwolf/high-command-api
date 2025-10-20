@@ -26,6 +26,10 @@ class HellDivers2Scraper:
         # Thread lock for rate limiting (scraper is safe for concurrent access)
         self._rate_limit_lock = threading.Lock()
 
+        # Track upstream API status (set by collector during data collection)
+        self.upstream_api_available = True
+        self._status_lock = threading.Lock()
+
         # Get headers from config, use "NA" if not configured
         client_name = (
             Config.HELLDIVERS_API_CLIENT_NAME
@@ -57,6 +61,16 @@ class HellDivers2Scraper:
                 logger.debug(f"Rate limiting: sleeping for {delay:.2f}s")
                 time.sleep(delay)
             self.last_request_time = time.time()
+
+    def set_upstream_status(self, available: bool):
+        """Update upstream API availability status (called during data collection)"""
+        with self._status_lock:
+            self.upstream_api_available = available
+
+    def is_upstream_available(self) -> bool:
+        """Get current upstream API status (no API call, just returns cached status)"""
+        with self._status_lock:
+            return self.upstream_api_available
 
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
