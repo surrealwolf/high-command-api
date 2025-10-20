@@ -1,6 +1,7 @@
 import requests
 import logging
 import time
+import threading
 from typing import Dict, List, Optional
 from src.config import Config
 
@@ -20,7 +21,10 @@ class HellDivers2Scraper:
         
         # Rate limiting: delay between requests (2 seconds for 5 requests in 10 seconds)
         self.request_delay = 2.0
-        self.last_request_time = 0
+        # Initialize to current time to allow first request immediately
+        self.last_request_time = time.time()
+        # Thread lock for rate limiting (scraper is safe for concurrent access)
+        self._rate_limit_lock = threading.Lock()
 
         # Get headers from config, use "NA" if not configured
         client_name = (
@@ -45,13 +49,14 @@ class HellDivers2Scraper:
         logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
     
     def _rate_limit(self):
-        """Enforce rate limiting between requests"""
-        elapsed = time.time() - self.last_request_time
-        if elapsed < self.request_delay:
-            delay = self.request_delay - elapsed
-            logger.debug(f"Rate limiting: sleeping for {delay:.2f}s")
-            time.sleep(delay)
-        self.last_request_time = time.time()
+        """Enforce rate limiting between requests (thread-safe)"""
+        with self._rate_limit_lock:
+            elapsed = time.time() - self.last_request_time
+            if elapsed < self.request_delay:
+                delay = self.request_delay - elapsed
+                logger.debug(f"Rate limiting: sleeping for {delay:.2f}s")
+                time.sleep(delay)
+            self.last_request_time = time.time()
 
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
