@@ -123,7 +123,7 @@ class HellDivers2Scraper:
             logger.error(f"Failed to fetch planet events: {e}")
             return None
 
-    def get_factions(self) -> Optional[List[str]]:
+    def get_factions(self) -> Optional[List[Dict]]:
         """Fetch all factions (from war data)"""
         try:
             war_data = self.get_war_status()

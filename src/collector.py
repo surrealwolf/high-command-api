@@ -77,16 +77,19 @@ class DataCollector:
             # Collect assignments (Major Orders)
             assignments = self.scraper.get_assignments()
             if assignments:
+                self.db.save_assignments(assignments)
                 logger.info(f"Collected {len(assignments)} assignments")
 
             # Collect dispatches (news)
             dispatches = self.scraper.get_dispatches()
             if dispatches:
+                self.db.save_dispatches(dispatches)
                 logger.info(f"Collected {len(dispatches)} dispatches")
 
             # Collect planet events
             events = self.scraper.get_planet_events()
             if events is not None:
+                self.db.save_planet_events(events)
                 logger.info(f"Collected {len(events)} planet events")
 
             logger.info("Data collection cycle completed successfully")
