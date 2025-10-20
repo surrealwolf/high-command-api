@@ -9,13 +9,10 @@ logger = logging.getLogger(__name__)
 class HellDivers2Scraper:
     """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)"""
 
-    DEFAULT_BASE_URL = "https://api.helldivers2.dev/api/v1"
-
     def __init__(self, timeout: int = 30, base_url: Optional[str] = None):
         self.timeout = timeout
-        # Use provided URL or config URL, fallback to default
-        base_url_config = Config.HELLDIVERS_API_BASE if Config.HELLDIVERS_API_BASE != "NA" else None
-        self.base_url = base_url or base_url_config or self.DEFAULT_BASE_URL
+        # Use provided URL or config URL
+        self.base_url = base_url or Config.HELLDIVERS_API_BASE
 
         # Get headers from config, use "NA" if not configured
         client_name = (
