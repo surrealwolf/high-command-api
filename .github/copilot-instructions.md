@@ -88,7 +88,7 @@
 - **Auto-incrementing IDs**: `id INTEGER PRIMARY KEY AUTOINCREMENT` on all tables
 - **Timestamps**: Every row gets `timestamp DATETIME DEFAULT CURRENT_TIMESTAMP`
 - **Migration**: No migration system in place; manual database backup recommended before schema changes
-- **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT OR REPLACE` for idempotency
+- **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT ... ON CONFLICT(unique_col) DO UPDATE SET ...` for idempotency (this preserves row identity and avoids resetting `id`/`timestamp`)
 
 ### Adding New Collectors
 - Add method to `scraper.py` following existing patterns (session timeout, User-Agent headers, X-Super-Client/X-Super-Contact headers)
