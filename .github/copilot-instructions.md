@@ -65,7 +65,17 @@
 - **Error Handling**: Scraper returns `None` on failures with logged exceptions; endpoints raise `HTTPException(404/500)` when data unavailable
 - **JSON Storage**: Complex nested objects stored as TEXT in database with `json.dumps()` for retrieval
 - **Configuration**: API base URL is read from `Config.HELLDIVERS_API_BASE` (no hardcoded fallback)
-- **Headers**: X-Super-Client and X-Super-Contact headers automatically added to all API requests
+- **Headers**: X-Super-Client and X-Super-Contact headers are automatically added to all API requests.
+  - **How to configure:**  
+    - The values for these headers are set via config attributes and environment variables:  
+      - `Config.SUPER_CLIENT_HEADER` (from environment variable `SUPER_CLIENT_HEADER`)  
+      - `Config.SUPER_CONTACT_HEADER` (from environment variable `SUPER_CONTACT_HEADER`)  
+    - To set these, add the following to your `.env` file or environment:  
+      ```
+      SUPER_CLIENT_HEADER=your-client-name
+      SUPER_CONTACT_HEADER=your-contact-email-or-identifier
+      ```
+    - These values are loaded in `src/config.py` and injected into all outgoing API requests by the scraper.
 
 ## Key Patterns & Conventions
 
