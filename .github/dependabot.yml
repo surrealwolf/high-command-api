@@ -1,0 +1,43 @@
+version: 2
+updates:
+  # Enable version updates for Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "surrealwolf"
+    labels:
+      - "dependencies"
+      - "python"
+    allow:
+      - dependency-type: "all"
+    # Group patch updates together
+    groups:
+      patch-minor-updates:
+        patterns:
+          - patch
+          - minor
+      major-updates:
+        patterns:
+          - major
+    commit-message:
+      prefix: "build"
+      prefix-scope: "deps"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "surrealwolf"
+    labels:
+      - "dependencies"
+      - "github-actions"
