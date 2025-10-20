@@ -43,17 +43,19 @@ class DataCollector:
         logger.info("Starting data collection cycle")
 
         try:
-            # Collect war status
+            # Collect war status (this includes statistics)
             war_data = self.scraper.get_war_status()
             if war_data:
                 self.db.save_war_status(war_data)
                 logger.info("War status collected")
-
-            # Collect statistics (extracted from war status)
-            stats_data = self.scraper.get_statistics()
-            if stats_data:
-                self.db.save_statistics(stats_data)
-                logger.info("Statistics collected")
+                
+                # Extract and save statistics from war_data (no extra API call needed)
+                stats_data = war_data.get("statistics")
+                if stats_data:
+                    self.db.save_statistics(stats_data)
+                    logger.info("Statistics collected")
+            else:
+                logger.info("Failed to collect war status and statistics")
 
             # Collect planets
             planets = self.scraper.get_planets()
