@@ -3,7 +3,7 @@
 ## Project Overview
 **Hell Divers 2 API**: Production-ready FastAPI application for real-time scraping and tracking of Hell Divers 2 game data. The system continuously collects war status, planet information, campaigns, major orders, dispatches, planet events, statistics, and faction data via background tasks and serves them through a comprehensive REST API.
 
-**API Source**: Community-maintained Hell Divers 2 API at `https://api.helldivers2.dev/api/v1` (257⭐ GitHub, actively maintained)
+**API Source**: Community-maintained Hell Divers 2 API at `https://api.helldivers2.dev/api/v1` (popular, actively maintained)
 - Rate limit: 5 requests per 10 seconds
 - Required headers: X-Super-Client, X-Super-Contact
 - Status: Live and actively maintained with real-time data
