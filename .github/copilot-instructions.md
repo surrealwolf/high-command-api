@@ -3,11 +3,36 @@
 ## Project Overview
 **Hell Divers 2 API**: Production-ready FastAPI application for real-time scraping and tracking of Hell Divers 2 game data. The system continuously collects war status, planet information, campaigns, major orders, dispatches, planet events, statistics, and faction data via background tasks and serves them through a comprehensive REST API.
 
-**API Source**: Community-maintained Hell Divers 2 API at `https://api.helldivers2.dev/api/v1` (257⭐ GitHub, actively maintained)
+**API Source**: Community-maintained Hell Divers 2 API at `https://api.helldivers2.dev/api/v1` (popular, actively maintained)
 - Rate limit: 5 requests per 10 seconds
 - Required headers: X-Super-Client, X-Super-Contact
 - Status: Live and actively maintained with real-time data
 
+
+**Rate Limit Handling Guidance**
+- All HTTP clients (e.g., `scraper.py`, `collector.py`) **must** implement centralized rate limit handling to prevent burst violations.
+- Use per-session throttling to ensure no more than 5 requests are sent in any 10-second window.
+- On receiving HTTP 429 (Too Many Requests), implement exponential backoff and retry logic. Recommended: use the `tenacity` library or custom asyncio-based throttling.
+- Example pseudocode:
+  ```python
+  import asyncio
+  from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+  import httpx
+  
+  @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), retry=retry_if_exception_type(httpx.HTTPStatusError))
+  async def fetch_with_rate_limit(url, headers):
+      async with httpx.AsyncClient() as client:
+          response = await client.get(url, headers=headers)
+          if response.status_code == 429:
+              raise httpx.HTTPStatusError("Rate limit exceeded", request=response.request, response=response)
+          response.raise_for_status()
+          return response.json()
+  
+  # Throttle requests in collector/scraper:
+  semaphore = asyncio.Semaphore(5)
+  async def throttled_fetch(*args, **kwargs):
+      async with semaphore:
+          return await fetch_with_rate_limit(*args, **kwargs)
 ## Environment & Build Setup
 
 ### Python Version
@@ -40,7 +65,17 @@
 - **Error Handling**: Scraper returns `None` on failures with logged exceptions; endpoints raise `HTTPException(404/500)` when data unavailable
 - **JSON Storage**: Complex nested objects stored as TEXT in database with `json.dumps()` for retrieval
 - **Configuration**: API base URL is read from `Config.HELLDIVERS_API_BASE` (no hardcoded fallback)
-- **Headers**: X-Super-Client and X-Super-Contact headers automatically added to all API requests
+- **Headers**: X-Super-Client and X-Super-Contact headers are automatically added to all API requests.
+  - **How to configure:**  
+    - The values for these headers are set via config attributes and environment variables:  
+      - `Config.SUPER_CLIENT_HEADER` (from environment variable `SUPER_CLIENT_HEADER`)  
+      - `Config.SUPER_CONTACT_HEADER` (from environment variable `SUPER_CONTACT_HEADER`)  
+    - To set these, add the following to your `.env` file or environment:  
+      ```
+      SUPER_CLIENT_HEADER=your-client-name
+      SUPER_CONTACT_HEADER=your-contact-email-or-identifier
+      ```
+    - These values are loaded in `src/config.py` and injected into all outgoing API requests by the scraper.
 
 ## Key Patterns & Conventions
 
@@ -87,7 +122,7 @@
 2. Add database storage method in `database.py` using `INSERT INTO` or `UPDATE` with JSON serialization for complex data
 3. Create API endpoint in `app.py` with proper tag, docstring, and error handling
 4. Add to `collector.py`'s `collect_all_data()` if background collection needed (typical pattern)
-5. Test with `demo.py` by adding mocked test functions using `@patch("requests.get")` or `@patch("requests.post")`
+5. Test with `demo.py` by adding mocked test functions using `@patch("requests.Session.request")` or patching the exact import path used in `scraper.py` to reliably intercept all HTTP calls
 
 ### Database Conventions
 - **Never break existing code**: Create new tables if schema change needed; old tables stay for backward compatibility
@@ -96,7 +131,7 @@
 - **Auto-incrementing IDs**: `id INTEGER PRIMARY KEY AUTOINCREMENT` on all tables
 - **Timestamps**: Every row gets `timestamp DATETIME DEFAULT CURRENT_TIMESTAMP`
 - **Migration**: No migration system in place; manual database backup recommended before schema changes
-- **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT OR REPLACE` for idempotency
+- **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT ... ON CONFLICT(unique_col) DO UPDATE SET ...` for idempotency (this preserves row identity and avoids resetting `id`/`timestamp`)
 
 ### Adding New Collectors
 - Add method to `scraper.py` following existing patterns (session timeout, User-Agent headers, X-Super-Client/X-Super-Contact headers)
@@ -179,7 +214,7 @@ make run                # Runs: python -m uvicorn src.app:app --host 0.0.0.0 --p
 | Persistence | `src/database.py` | SQLite schema with 7 tables + CRUD operations |
 | Scheduling | `src/collector.py` | APScheduler background tasks (5-minute cycle) |
 | Settings | `src/config.py` | Environment-based configuration classes |
-| Unit Tests | `tests/demo.py` | 11 mocked unit tests (no server dependency) |
+| Unit Tests | `tests/demo.py` | mocked unit tests (no server dependency) |
 | CI/CD Workflows | `.github/workflows/` | tests.yml, docker.yml, auto-approve.yml, auto-assign.yml |
 | AI Instructions | `.github/copilot-instructions.md` | This file (aligned with MCP project) |
 | Documentation | `DEVELOPMENT.md` | Architecture & design decisions |
