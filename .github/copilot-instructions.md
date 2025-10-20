@@ -8,6 +8,31 @@
 - Required headers: X-Super-Client, X-Super-Contact
 - Status: Live and actively maintained with real-time data
 
+
+**Rate Limit Handling Guidance**
+- All HTTP clients (e.g., `scraper.py`, `collector.py`) **must** implement centralized rate limit handling to prevent burst violations.
+- Use per-session throttling to ensure no more than 5 requests are sent in any 10-second window.
+- On receiving HTTP 429 (Too Many Requests), implement exponential backoff and retry logic. Recommended: use the `tenacity` library or custom asyncio-based throttling.
+- Example pseudocode:
+  ```python
+  import asyncio
+  from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+  import httpx
+  
+  @retry(wait=wait_exponential(multiplier=1, min=2, max=10), stop=stop_after_attempt(5), retry=retry_if_exception_type(httpx.HTTPStatusError))
+  async def fetch_with_rate_limit(url, headers):
+      async with httpx.AsyncClient() as client:
+          response = await client.get(url, headers=headers)
+          if response.status_code == 429:
+              raise httpx.HTTPStatusError("Rate limit exceeded", request=response.request, response=response)
+          response.raise_for_status()
+          return response.json()
+  
+  # Throttle requests in collector/scraper:
+  semaphore = asyncio.Semaphore(5)
+  async def throttled_fetch(*args, **kwargs):
+      async with semaphore:
+          return await fetch_with_rate_limit(*args, **kwargs)
 ## Environment & Build Setup
 
 ### Python Version
