@@ -462,7 +462,7 @@ class Database:
                 biomes = {}
                 for row in results:
                     planet_data = json.loads(row[0])
-                    if "biome" in planet_data:
+                    if "biome" in planet_data and isinstance(planet_data["biome"], dict):
                         biome_name = planet_data["biome"].get("name")
                         if biome_name and biome_name not in biomes:
                             biomes[biome_name] = planet_data["biome"]

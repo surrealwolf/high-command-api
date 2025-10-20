@@ -85,10 +85,10 @@ async def get_campaigns():
     data = scraper.get_campaign_info()
     
     # Fallback to cache if live API fails
-    if not data:
+    if data is None:
         data = db.get_latest_campaigns_snapshot()
     
-    if data:
+    if data is not None:
         return data
     raise HTTPException(status_code=503, detail="Failed to fetch campaigns and no cached data available")
 
@@ -114,10 +114,10 @@ async def get_planets():
     data = scraper.get_planets()
     
     # Fallback to cache if live API fails
-    if not data:
+    if data is None:
         data = db.get_latest_planets_snapshot()
     
-    if data:
+    if data is not None:
         return data
     raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
 
@@ -193,10 +193,10 @@ async def get_factions():
     data = scraper.get_factions()
     
     # Fallback to cache if live API fails
-    if not data:
+    if data is None:
         data = db.get_latest_factions_snapshot()
     
-    if data:
+    if data is not None:
         return data
     raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
 
@@ -213,10 +213,10 @@ async def get_biomes():
     data = scraper.get_biomes()
     
     # Fallback to cache if live API fails
-    if not data:
+    if data is None:
         data = db.get_latest_biomes_snapshot()
     
-    if data:
+    if data is not None:
         return data
     raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
 
