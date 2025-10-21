@@ -2,7 +2,7 @@ import requests
 import logging
 import time
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from src.config import Config
 
 logger = logging.getLogger(__name__)
@@ -58,22 +58,28 @@ class HellDivers2Scraper:
                 time.sleep(delay)
             self.last_request_time = time.time()
 
-    def _fetch_with_backoff(self, url: str, max_retries: int = 5) -> Optional[Dict]:
+    def _fetch_with_backoff(self, url: str, max_retries: int = 5) -> Optional[Union[Dict, List[Dict]]]:
         """Fetch URL with exponential backoff on 429 errors
+        
+        Rate limiting is applied once before the first request.
+        Exponential backoff handles retry delays independently.
         
         Returns either a dict or list depending on the endpoint.
         """
+        # Apply rate limiting once before first request attempt
+        self._rate_limit()
+        
         for attempt in range(max_retries):
             try:
-                self._rate_limit()
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
                 return response.json()
             except requests.HTTPError as e:
                 if e.response.status_code == 429:
                     if attempt < max_retries - 1:
-                        # Exponential backoff: 2^attempt * 2 seconds (2s, 4s, 8s, 16s, 32s)
-                        backoff_delay = (2 ** attempt) * 2
+                        # Exponential backoff: 5s, 10s, 20s, 40s, 80s
+                        # Aligns with API's 10-second rate limit window
+                        backoff_delay = (2 ** attempt) * 5
                         logger.warning(
                             f"Rate limited (429). Attempt {attempt + 1}/{max_retries}. "
                             f"Backing off for {backoff_delay}s before retry..."
@@ -92,38 +98,70 @@ class HellDivers2Scraper:
 
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
-        return self._fetch_with_backoff(f"{self.base_url}/war")
+        result = self._fetch_with_backoff(f"{self.base_url}/war")
+        if result is None:
+            return None
+        if isinstance(result, dict):
+            return result
+        logger.warning(f"Expected dict from war status endpoint, got {type(result).__name__}")
+        return None
 
     def get_campaign_info(self) -> Optional[List[Dict]]:
         """Fetch active campaigns information"""
         result = self._fetch_with_backoff(f"{self.base_url}/campaigns")
-        return result if isinstance(result, list) else None
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            logger.warning(f"Expected list from campaigns endpoint, got {type(result).__name__}")
+            return None
+        return result
 
     def get_assignments(self) -> Optional[List[Dict]]:
         """Fetch current assignments (Major Orders)"""
         result = self._fetch_with_backoff(f"{self.base_url}/assignments")
-        return result if isinstance(result, list) else None
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            logger.warning(f"Expected list from assignments endpoint, got {type(result).__name__}")
+            return None
+        return result
 
     def get_dispatches(self) -> Optional[List[Dict]]:
         """Fetch news dispatches and announcements"""
         result = self._fetch_with_backoff(f"{self.base_url}/dispatches")
-        return result if isinstance(result, list) else None
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            logger.warning(f"Expected list from dispatches endpoint, got {type(result).__name__}")
+            return None
+        return result
 
     def get_planets(self) -> Optional[List[Dict]]:
         """Fetch all planets information"""
         result = self._fetch_with_backoff(f"{self.base_url}/planets")
-        return result if isinstance(result, list) else None
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            logger.warning(f"Expected list from planets endpoint, got {type(result).__name__}")
+            return None
+        return result
 
     def get_planet_status(self, planet_index: int) -> Optional[Dict]:
         """Fetch status of a specific planet"""
-        return self._fetch_with_backoff(f"{self.base_url}/planets/{planet_index}")
+        result = self._fetch_with_backoff(f"{self.base_url}/planets/{planet_index}")
+        if result is None:
+            return None
+        if isinstance(result, dict):
+            return result
+        logger.warning(f"Expected dict from planet status endpoint, got {type(result).__name__}")
+        return None
 
     def get_statistics(self) -> Optional[Dict]:
         """Fetch global game statistics (part of war status)"""
         try:
             # Statistics are included in war status, return the statistics subset
             war_data = self.get_war_status()
-            if war_data and "statistics" in war_data:
+            if war_data and isinstance(war_data, dict) and "statistics" in war_data:
                 return war_data["statistics"]
             return None
         except requests.RequestException as e:
@@ -133,7 +171,12 @@ class HellDivers2Scraper:
     def get_planet_events(self) -> Optional[List[Dict]]:
         """Fetch planet events"""
         result = self._fetch_with_backoff(f"{self.base_url}/planet-events")
-        return result if isinstance(result, list) else None
+        if result is None:
+            return None
+        if not isinstance(result, list):
+            logger.warning(f"Expected list from planet-events endpoint, got {type(result).__name__}")
+            return None
+        return result
 
     def get_factions(self) -> Optional[List[Dict]]:
         """Fetch all factions (from war data)"""
