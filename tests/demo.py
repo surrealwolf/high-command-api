@@ -64,7 +64,7 @@ def test_health(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"status": "operational", "collector_running": True}
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/health")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     data = response.json()
@@ -81,7 +81,7 @@ def test_root(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"message": "Hell Divers 2 API", "version": "1.0.0"}
     mock_get.return_value = mock_response
-    
+
     response = requests.get("http://localhost:5000/")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     pretty_print_json(response.json())
@@ -98,10 +98,10 @@ def test_war_status(mock_get):
         "statistics": {"players": 50000, "missions": 1000000},
         "factions": [{"name": "Humans", "controlled": 50}],
         "currently_attacking": [1, 2, 3],
-        "planet_events": []
+        "planet_events": [],
     }
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/war/status")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -119,10 +119,10 @@ def test_planets(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = [
         {"planet_index": 0, "name": "Malevelon Creek", "biome": {"name": "Swamp"}, "players": 100},
-        {"planet_index": 1, "name": "Meridian", "biome": {"name": "Desert"}, "players": 80}
+        {"planet_index": 1, "name": "Meridian", "biome": {"name": "Desert"}, "players": 80},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/planets")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -146,7 +146,7 @@ def test_statistics(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"players": 50000, "missions": 1000000, "kills": 5000000}
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/statistics")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -164,10 +164,10 @@ def test_factions(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = [
         {"id": 1, "name": "Humans", "controlled": 50},
-        {"id": 2, "name": "Bugs", "controlled": 30}
+        {"id": 2, "name": "Bugs", "controlled": 30},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/factions")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -189,10 +189,10 @@ def test_biomes(mock_get):
     mock_response.json.return_value = [
         {"id": 1, "name": "Swamp"},
         {"id": 2, "name": "Desert"},
-        {"id": 3, "name": "Frozen"}
+        {"id": 3, "name": "Frozen"},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/biomes")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -206,14 +206,16 @@ def test_biomes(mock_get):
 
 
 @patch("requests.post")
-def test_refresh_endpoint(mock_post, endpoint_path="/war/status/refresh", endpoint_name="War Status"):
+def test_refresh_endpoint(
+    mock_post, endpoint_path="/war/status/refresh", endpoint_name="War Status"
+):
     """Test refresh endpoints (POST requests)"""
     print_header(f"Testing {endpoint_name} Refresh")
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "message": f"{endpoint_name} refreshed"}
     mock_post.return_value = mock_response
-    
+
     response = requests.post(f"{API_BASE}{endpoint_path}")
     assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
     if response.status_code == 200:
@@ -233,7 +235,7 @@ def test_docs(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"openapi": "3.0.0", "info": {"title": "Hell Divers 2 API"}}
     mock_get.return_value = mock_response
-    
+
     response = requests.get("http://localhost:5000/openapi.json")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     print_success("OpenAPI schema is available")
@@ -310,13 +312,16 @@ def test_refresh_war_status():
         mock_response.status_code = 200
         mock_response.json.return_value = {"success": True, "message": "War Status refreshed"}
         mock_post.return_value = mock_response
-        
+
         endpoint_path = "/war/status/refresh"
         endpoint_name = "War Status"
         print_header(f"Testing {endpoint_name} Refresh")
-        
+
         response = requests.post(f"{API_BASE}{endpoint_path}")
-        assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
+        assert response.status_code in (
+            200,
+            500,
+        ), f"Expected 200 or 500, got {response.status_code}"
         if response.status_code == 200:
             data = response.json()
             print_success(f"{endpoint_name} refreshed successfully")
@@ -333,13 +338,16 @@ def test_refresh_statistics():
         mock_response.status_code = 200
         mock_response.json.return_value = {"success": True, "message": "Statistics refreshed"}
         mock_post.return_value = mock_response
-        
+
         endpoint_path = "/statistics/refresh"
         endpoint_name = "Statistics"
         print_header(f"Testing {endpoint_name} Refresh")
-        
+
         response = requests.post(f"{API_BASE}{endpoint_path}")
-        assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
+        assert response.status_code in (
+            200,
+            500,
+        ), f"Expected 200 or 500, got {response.status_code}"
         if response.status_code == 200:
             data = response.json()
             print_success(f"{endpoint_name} refreshed successfully")

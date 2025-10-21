@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class HellDivers2Scraper:
     """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)
-    
+
     Rate limiting: 5 requests per 10 seconds (2.0 seconds between requests enforced)
     """
 
@@ -18,7 +18,7 @@ class HellDivers2Scraper:
         self.timeout = timeout
         # Use provided URL or config URL
         self.base_url = base_url or Config.HELLDIVERS_API_BASE
-        
+
         # Rate limiting: delay between requests (2 seconds for 5 requests in 10 seconds)
         self.request_delay = 2.0
         # Initialize to current time to allow first request immediately
@@ -47,7 +47,7 @@ class HellDivers2Scraper:
             }
         )
         logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
-    
+
     def _rate_limit(self):
         """Enforce rate limiting between requests (thread-safe)"""
         with self._rate_limit_lock:
