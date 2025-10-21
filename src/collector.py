@@ -41,10 +41,6 @@ class DataCollector:
     def collect_all_data(self):
         """Collect all available data"""
         logger.info("Starting data collection cycle")
-        
-        # Track success/failure counts
-        success_count = 0
-        failure_count = 0
 
         try:
             # Collect war status (this includes statistics)
@@ -131,8 +127,6 @@ class DataCollector:
 
         except Exception as e:
             logger.error(f"Error during data collection: {e}")
-            # Mark upstream as unavailable on exception
-            self.scraper.set_upstream_status(False)
 
     def collect_planet_data(self, planet_index: int):
         """Collect data for a specific planet"""
