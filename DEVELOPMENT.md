@@ -350,7 +350,7 @@ pip install -r requirements.txt --force-reinstall
 
 ### Issue: "503 errors on cache-fallback endpoints"
 **Solution**: 
-- Check if upstream API is accessible: `curl https://api.helldivers2.dev/api/v1/war`
+- Check if upstream API is accessible: `curl https://api.helldivers2.dev/api/v1/war/info`
 - Verify database has cached data: `sqlite3 helldivers2.db "SELECT COUNT(*) FROM planet_status"`
 - Wait for collector to run and populate cache (runs every 5 minutes)
 
