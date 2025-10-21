@@ -54,10 +54,17 @@
   - `statistics`: Global game stats
   - `planet_status`: Individual planet data
   - `campaigns`: Campaign information
+  - `assignments`: Major orders
+  - `dispatches`: News and announcements
+  - `planet_events`: Special planet events
+  - `system_status`: Internal metadata (upstream API status)
 - **Key Methods**:
   - `save_*()`: Insert data
   - `get_*()`: Retrieve data
   - `*_history()`: Get historical data
+  - `get_latest_*_snapshot()`: Get cached data for fallback
+  - `set_upstream_status()`: Track upstream API availability
+  - `get_upstream_status()`: Check last known upstream status
 
 ### `collector.py` - Background Tasks
 - **Purpose**: Schedule and manage data collection
@@ -96,6 +103,22 @@ All responses follow a consistent JSON format:
   "detail": "Error message describing what went wrong"
 }
 ```
+
+### Cache Fallback Behavior
+
+Certain endpoints implement cache fallback for resilience:
+- **Endpoints with cache fallback**: `/api/campaigns`, `/api/planets`, `/api/planets/{planet_index}`, `/api/factions`, `/api/biomes`
+- **Fallback logic**:
+  1. Try to fetch from live upstream API
+  2. If upstream fails, retrieve from database cache
+  3. If cache exists, return 200 with cached data
+  4. If no cache exists, return 503 Service Unavailable
+
+**Status Codes**:
+- `200 OK`: Success (may be live or cached data)
+- `404 Not Found`: Resource doesn't exist or no data collected
+- `503 Service Unavailable`: Upstream API down AND no cached data available
+- `500 Internal Server Error`: Unexpected server error
 
 ### Endpoint Patterns
 
@@ -157,6 +180,42 @@ async def get_new_data():
         return data
     raise HTTPException(status_code=404, detail="No data available")
 ```
+
+### 4. (Optional) Add Cache Fallback
+
+For critical endpoints that should continue serving during upstream outages:
+```python
+@app.get("/api/new-data", tags=["New Data"])
+async def get_new_data():
+    """Get new data (with cache fallback)"""
+    # Try live API first
+    data = scraper.get_new_data()
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        data = db.get_latest_new_data_snapshot()
+    
+    if data is not None:
+        return data
+    raise HTTPException(status_code=503, detail="No new data available (live fetch failed and no cached data)")
+```
+
+### System Status Tracking
+
+The `system_status` table tracks internal metadata:
+- **Purpose**: Monitor upstream API health and other system metrics
+- **Usage**: Collector updates upstream status after each collection cycle
+- **Schema**:
+  ```sql
+  CREATE TABLE system_status (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      status_key TEXT UNIQUE,
+      status_value BOOLEAN,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+  ```
+- **Current Keys**:
+  - `upstream_api_available`: Boolean indicating if Hell Divers 2 API is reachable
 
 ## Testing
 
@@ -288,6 +347,31 @@ lsof -i :5000
 ```bash
 pip install -r requirements.txt --force-reinstall
 ```
+
+### Issue: "503 errors on cache-fallback endpoints"
+**Solution**: 
+- Check if upstream API is accessible: `curl https://api.helldivers2.dev/api/v1/war/info`
+- Verify database has cached data: `sqlite3 helldivers2.db "SELECT COUNT(*) FROM planet_status"`
+- Wait for collector to run and populate cache (runs every 5 minutes)
+
+## Database Migration Notes
+
+### Adding system_status Table (Cache Fallback Feature)
+
+If upgrading from a version before the cache-fallback feature, the `system_status` table will be automatically created on next startup. No manual migration is required.
+
+**What changed**:
+- New table: `system_status` with columns `id`, `status_key`, `status_value`, `timestamp`
+- New index: `idx_system_status_key` on `status_key` column
+- New methods: `set_upstream_status()`, `get_upstream_status()` in `database.py`
+- New snapshot methods: `get_latest_planets_snapshot()`, `get_latest_campaigns_snapshot()`, etc.
+
+**To verify migration**:
+```bash
+sqlite3 helldivers2.db "SELECT name FROM sqlite_master WHERE type='table' AND name='system_status'"
+```
+
+Expected output: `system_status`
 
 ## Code Style
 
