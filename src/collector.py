@@ -43,21 +43,19 @@ class DataCollector:
         logger.info("Starting data collection cycle")
 
         try:
-            # Collect war status (this includes statistics)
+            # Collect war status
             war_data = self.scraper.get_war_status()
             if war_data is not None:
-                if war_data:
-                    self.db.save_war_status(war_data)
-                    logger.info("War status collected")
+                self.db.save_war_status(war_data)
+                logger.info("War status collected")
             else:
                 logger.warning("Failed to collect war status")
 
-            # Collect statistics (extracted from war status)
+            # Collect statistics
             stats_data = self.scraper.get_statistics()
             if stats_data is not None:
-                if stats_data:
-                    self.db.save_statistics(stats_data)
-                    logger.info("Statistics collected")
+                self.db.save_statistics(stats_data)
+                logger.info("Statistics collected")
             else:
                 logger.warning("Failed to collect statistics")
 

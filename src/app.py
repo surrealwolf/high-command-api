@@ -90,7 +90,7 @@ async def get_campaigns():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="No campaign data available (live fetch failed and no cached data)")
+    raise HTTPException(status_code=503, detail="No campaign data available (live fetch failed and no cached data)")
 
 
 @app.get("/api/campaigns/active", tags=["Campaigns"])
@@ -119,7 +119,7 @@ async def get_planets():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch planets and no cached data available")
+    raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}", tags=["Planets"])
@@ -131,12 +131,14 @@ async def get_planet_status(planet_index: int):
     # Fallback to cache if live API fails
     if data is None:
         history = db.get_planet_status_history(planet_index, limit=1)
-        if history:
-            data = history[0].get("data") if isinstance(history[0], dict) and "data" in history[0] else history[0]
+        if history and isinstance(history[0], dict) and "data" in history[0]:
+            data = history[0]["data"]
+        elif history:
+            data = history[0]
     
     if data is not None:
         return data
-    raise HTTPException(status_code=404, detail=f"Failed to fetch planet {planet_index} and no cached data available")
+    raise HTTPException(status_code=503, detail=f"Failed to fetch planet {planet_index} and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}/history", tags=["Planets"])
@@ -198,7 +200,7 @@ async def get_factions():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch factions and no cached data available")
+    raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
 
 
 # ========================
@@ -218,7 +220,7 @@ async def get_biomes():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch biomes and no cached data available")
+    raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
 
 
 # ========================

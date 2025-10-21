@@ -1,7 +1,6 @@
 import sqlite3
 import json
 import logging
-import time
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -109,6 +108,18 @@ class Database:
             """
             )
 
+            # System status table (for internal metadata like upstream API status)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS system_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    status_key TEXT UNIQUE,
+                    status_value BOOLEAN,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+
             # Index for faster queries
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_war_timestamp ON war_status(timestamp)")
             cursor.execute(
@@ -120,6 +131,7 @@ class Database:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_timestamp ON dispatches(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_timestamp ON planet_events(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_system_status_key ON system_status(status_key)")
 
             conn.commit()
 
@@ -475,14 +487,15 @@ class Database:
             return None
 
     def set_upstream_status(self, available: bool):
-        """Update upstream API availability status"""
+        """Update upstream API availability status in system_status table"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Store upstream status with current timestamp
+                # Use INSERT OR REPLACE to upsert the status
                 cursor.execute(
-                    """INSERT INTO war_status (data) VALUES (?)""",
-                    (json.dumps({"_upstream_status": available, "_timestamp": time.time()}),),
+                    """INSERT OR REPLACE INTO system_status (status_key, status_value) 
+                       VALUES ('upstream_api_available', ?)""",
+                    (available,),
                 )
                 conn.commit()
                 logger.debug(f"Upstream API status set to: {available}")
@@ -494,16 +507,15 @@ class Database:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Get the most recent status entry
+                # Get the upstream API status
                 cursor.execute(
-                    "SELECT data FROM war_status WHERE json_extract(data, '$._upstream_status') IS NOT NULL ORDER BY timestamp DESC LIMIT 1"
+                    """SELECT status_value FROM system_status 
+                       WHERE status_key = 'upstream_api_available' LIMIT 1"""
                 )
                 result = cursor.fetchone()
                 
                 if result:
-                    data = json.loads(result[0])
-                    if "_upstream_status" in data:
-                        return data["_upstream_status"]
+                    return bool(result[0])
                 
                 # Default to True if no status data found
                 return True
