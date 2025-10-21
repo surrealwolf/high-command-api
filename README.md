@@ -31,10 +31,10 @@ high-command-api/
 │   ├── __init__.py
 │   └── demo.py            # Comprehensive tests
 ├── docs/                   # Documentation
-│   ├── DEPLOYMENT.md      # Production deployment guide
-│   ├── DEVELOPMENT.md     # Architecture guide
+│   ├── API.md             # API reference
+│   ├── ARCHITECTURE.md    # Architecture & design
 │   ├── QUICKREF.md        # Quick reference
-│   └── API.md             # API reference
+│   └── DEPLOYMENT.md      # Deployment guide
 ├── Makefile               # Project automation
 ├── Dockerfile             # Container image
 ├── docker-compose.yml     # Multi-container setup
@@ -42,6 +42,17 @@ high-command-api/
 ├── .env.example          # Environment template
 └── pyproject.toml        # Project metadata
 ```
+
+**Note**: Files like `*_SUMMARY.md`, `COMPLETE_GUIDE.md`, etc. are development artifacts and can be safely ignored.
+
+## Documentation
+
+- **[README.md](README.md)** - This file; project overview and quick start
+- **[docs/API.md](docs/API.md)** - Complete API endpoint reference with examples
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and database schema
+- **[docs/DEVELOPMENT.md](DEVELOPMENT.md)** - Development guide and patterns
+- **[docs/DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment instructions
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - AI coding agent instructions
 
 ## Installation
 
