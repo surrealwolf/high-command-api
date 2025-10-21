@@ -53,16 +53,18 @@
 - **`make check-all`** - Format, lint, test (complete quality gate for PRs)
 
 ### Core Components
-1. **app.py** (`src/app.py` - 205 lines): FastAPI application with 30+ endpoints organized by tags (War, Planets, Statistics, Campaigns, Factions, Biomes, System)
+1. **app.py** (`src/app.py` - 230 lines): FastAPI application with 30+ endpoints organized by tags (War, Planets, Statistics, Campaigns, Factions, Biomes, System). Implements cache fallback pattern for critical endpoints.
 2. **scraper.py** (`src/scraper.py` - 175 lines): HTTP client for Hell Divers 2 community API with rate limiting (2 second delay between requests to stay within 5 requests/10 seconds limit). 10 methods: `get_war_status()`, `get_planets()`, `get_statistics()`, `get_factions()`, `get_biomes()`, `get_campaign_info()`, `get_assignments()`, `get_dispatches()`, `get_planet_events()`, `get_planet_status()`
-3. **database.py** (`src/database.py` - 360 lines): SQLite manager with 7 tables (war_status, statistics, planet_status, campaigns, assignments, dispatches, planet_events) + indexes for fast queries
-4. **collector.py** (`src/collector.py` - 109 lines): APScheduler-based background task runner that calls `collect_all_data()` every 5 minutes (300s) during app lifecycle, collecting all data types with proper error handling
+3. **database.py** (`src/database.py` - 525 lines): SQLite manager with 8 tables (war_status, statistics, planet_status, campaigns, assignments, dispatches, planet_events, system_status) + indexes for fast queries. Includes snapshot methods for cache fallback.
+4. **collector.py** (`src/collector.py` - 145 lines): APScheduler-based background task runner that calls `collect_all_data()` every 5 minutes (300s) during app lifecycle, collecting all data types with proper error handling. Updates system_status table with upstream API availability.
 5. **config.py** (`src/config.py` - 57 lines): Environment-based configuration with support for custom API URLs and headers, DevelopmentConfig (1-minute intervals) vs ProductionConfig (5-minute intervals)
 
 ### Lifecycle & Integration
 - **Startup**: `lifespan()` context manager in app.py starts `collector.start()`, which launches APScheduler
 - **Data Flow**: Collector → Scraper → (HTTP to Hell Divers 2 Community API) → Parser → Database → API endpoints
-- **Error Handling**: Scraper returns `None` on failures with logged exceptions; endpoints raise `HTTPException(404/500)` when data unavailable
+- **Error Handling**: Scraper returns `None` on failures with logged exceptions; endpoints with cache fallback try cached data before raising `HTTPException(503)`, other endpoints raise `HTTPException(404/500)` when data unavailable
+- **Cache Fallback**: Critical endpoints (`/api/campaigns`, `/api/planets`, `/api/planets/{planet_index}`, `/api/factions`, `/api/biomes`) automatically fall back to cached data when upstream API fails, returning 503 only when both live fetch AND cache fail
+- **System Status Tracking**: Collector updates `system_status` table with `upstream_api_available` boolean after each collection cycle (success=True, failure=False)
 - **JSON Storage**: Complex nested objects stored as TEXT in database with `json.dumps()` for retrieval
 - **Configuration**: API base URL is read from `Config.HELLDIVERS_API_BASE` (no hardcoded fallback)
 - **Headers**: X-Super-Client and X-Super-Contact headers are automatically added to all API requests.
@@ -130,8 +132,9 @@
 - **Use JSON TEXT** for nested/variable data to avoid schema sprawl
 - **Auto-incrementing IDs**: `id INTEGER PRIMARY KEY AUTOINCREMENT` on all tables
 - **Timestamps**: Every row gets `timestamp DATETIME DEFAULT CURRENT_TIMESTAMP`
-- **Migration**: No migration system in place; manual database backup recommended before schema changes
+- **Migration**: No migration system in place; manual database backup recommended before schema changes. New tables are auto-created via `CREATE TABLE IF NOT EXISTS`.
 - **Unique constraints**: Use `UNIQUE` for business logic keys (e.g., campaign_id, assignment_id) with `INSERT ... ON CONFLICT(unique_col) DO UPDATE SET ...` for idempotency (this preserves row identity and avoids resetting `id`/`timestamp`)
+- **System metadata**: Use `system_status` table for internal tracking (e.g., upstream_api_available) with `INSERT OR REPLACE` pattern for upserts
 
 ### Adding New Collectors
 - Add method to `scraper.py` following existing patterns (session timeout, User-Agent headers, X-Super-Client/X-Super-Contact headers)
@@ -140,6 +143,16 @@
 - Ensure idempotent: safe to run every 5 minutes without side effects
 - Include logging before and after: `logger.info(f"Collected X items")`
 - Use `save_*()` methods for data persistence (don't just log collection without storage)
+
+### Adding Cache Fallback to Endpoints
+For critical endpoints that should remain available during upstream outages:
+1. Try live API fetch first: `data = scraper.get_resource()`
+2. Check for failure: `if data is None:`
+3. Fall back to cache: `data = db.get_latest_resource_snapshot()`
+4. Return data if available: `if data is not None: return data`
+5. Raise 503 if both fail: `raise HTTPException(status_code=503, detail="...and no cached data")`
+6. Implement corresponding `get_latest_*_snapshot()` method in database.py that retrieves most recent cached data
+7. Pattern example: See `/api/campaigns`, `/api/planets`, `/api/factions` in app.py
 
 ### Dependencies
 - **Framework**: FastAPI 0.104.1, Uvicorn 0.24.0

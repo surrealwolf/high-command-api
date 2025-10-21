@@ -77,6 +77,8 @@ GET /api/campaigns
 ```
 Get campaign information from the Hell Divers 2 API.
 
+**Cache Fallback**: If upstream API is unavailable, returns most recent cached campaign data.
+
 **Response:**
 ```json
 {
@@ -87,6 +89,14 @@ Get campaign information from the Hell Divers 2 API.
       "status": "active"
     }
   ]
+}
+```
+
+**Error Responses:**
+- `503 Service Unavailable`: Upstream API failed and no cached data available
+```json
+{
+  "detail": "No campaign data available (live fetch failed and no cached data)"
 }
 ```
 
@@ -115,6 +125,8 @@ GET /api/planets
 ```
 Get information about all planets.
 
+**Cache Fallback**: If upstream API is unavailable, returns most recent cached planet snapshot.
+
 **Response:**
 ```json
 [
@@ -127,11 +139,21 @@ Get information about all planets.
 ]
 ```
 
+**Error Responses:**
+- `503 Service Unavailable`: Upstream API failed and no cached data available
+```json
+{
+  "detail": "Failed to fetch planets and no cached data available"
+}
+```
+
 ### Get Planet Status
 ```http
 GET /api/planets/{planet_index}
 ```
 Get status of a specific planet.
+
+**Cache Fallback**: If upstream API is unavailable, returns most recent cached status for this planet.
 
 **Parameters:**
 - `planet_index` (integer): The planet index
@@ -144,6 +166,14 @@ Get status of a specific planet.
   "owner": "Humans",
   "status": "contested",
   "biome": "Swamp"
+}
+```
+
+**Error Responses:**
+- `503 Service Unavailable`: Upstream API failed and no cached data for this planet
+```json
+{
+  "detail": "Failed to fetch planet {planet_index} and no cached data available"
 }
 ```
 
@@ -226,6 +256,8 @@ GET /api/factions
 ```
 Get all faction information.
 
+**Cache Fallback**: If upstream API is unavailable, returns factions from most recent cached war status.
+
 **Response:**
 ```json
 [
@@ -242,6 +274,14 @@ Get all faction information.
 ]
 ```
 
+**Error Responses:**
+- `503 Service Unavailable`: Upstream API failed and no cached faction data
+```json
+{
+  "detail": "Failed to fetch factions and no cached data available"
+}
+```
+
 ## Biome Endpoints
 
 ### Get Biomes
@@ -249,6 +289,8 @@ Get all faction information.
 GET /api/biomes
 ```
 Get information about all available biomes.
+
+**Cache Fallback**: If upstream API is unavailable, returns biomes from most recent cached planet data.
 
 **Response:**
 ```json
@@ -264,6 +306,14 @@ Get information about all available biomes.
     "description": "Arid and sandy environment"
   }
 ]
+```
+
+**Error Responses:**
+- `503 Service Unavailable`: Upstream API failed and no cached biome data
+```json
+{
+  "detail": "Failed to fetch biomes and no cached data available"
+}
 ```
 
 ## Documentation Endpoints
@@ -289,6 +339,13 @@ Alternative API documentation interface.
 ## Error Responses
 
 ### 404 Not Found
+Returned when a resource doesn't exist or no data has been collected yet.
+
+**Example scenarios**:
+- Requesting history for a planet that has never been tracked
+- Accessing active campaigns when none are currently active
+- Querying data before the first collection cycle completes
+
 ```json
 {
   "detail": "No war status data available"
@@ -296,11 +353,51 @@ Alternative API documentation interface.
 ```
 
 ### 500 Internal Server Error
+Returned when an unexpected server error occurs.
+
+**Example scenarios**:
+- Failed to refresh data due to scraper error
+- Database write failure
+- Unexpected exception in request handler
+
 ```json
 {
   "detail": "Failed to fetch war status"
 }
 ```
+
+### 503 Service Unavailable
+**New in cache-fallback feature**: Returned by cache-enabled endpoints when BOTH conditions are true:
+1. Upstream Hell Divers 2 API is unavailable or returns an error
+2. No cached data exists in the database
+
+**Endpoints that return 503**:
+- `GET /api/campaigns`
+- `GET /api/planets`
+- `GET /api/planets/{planet_index}`
+- `GET /api/factions`
+- `GET /api/biomes`
+
+**What this means for API consumers**:
+- A 503 response indicates a genuine service degradation (upstream down + no cache)
+- A 200 response on these endpoints may contain cached data from the last successful collection
+- Consider implementing retry logic with exponential backoff for 503 responses
+- Monitor for persistent 503s which may indicate prolonged upstream outage
+
+```json
+{
+  "detail": "No campaign data available (live fetch failed and no cached data)"
+}
+```
+
+### Understanding Cache Fallback
+Cache-enabled endpoints follow this logic:
+1. **Try live API** - Attempt to fetch fresh data from upstream
+2. **Fallback to cache** - If live fetch fails, try to retrieve from database
+3. **Return 200** - If either live or cached data is available
+4. **Return 503** - Only if both live fetch AND cache retrieval fail
+
+This ensures maximum availability and resilience against upstream API outages.
 
 ### 422 Unprocessable Entity
 ```json

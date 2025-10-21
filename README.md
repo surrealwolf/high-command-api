@@ -11,6 +11,7 @@ High Command API provides comprehensive access to Hell Divers 2 game statistics,
 - ✅ **Real-time Data Collection**: Automatic background scraping every 5 minutes
 - ✅ **Comprehensive Endpoints**: 30+ endpoints for accessing game data
 - ✅ **Historical Tracking**: SQLite database with optimized queries
+- ✅ **Cache Fallback**: Graceful degradation when upstream API is unavailable
 - ✅ **Interactive Documentation**: Auto-generated Swagger UI and ReDoc
 - ✅ **Production Ready**: Docker support, error handling, type hints
 - ✅ **Developer Friendly**: Clean code, extensive documentation
@@ -152,8 +153,23 @@ The API uses SQLite to store:
 - **statistics**: Game-wide statistics with timestamps
 - **planet_status**: Individual planet status snapshots
 - **campaigns**: Active and completed campaigns
+- **assignments**: Major orders and assignments
+- **dispatches**: News and announcements
+- **planet_events**: Special events on planets
+- **system_status**: Internal metadata (e.g., upstream API availability)
 
 All data includes timestamps for historical tracking and analysis.
+
+### Cache Fallback Strategy
+
+When the upstream Hell Divers 2 API is unavailable, the following endpoints automatically fall back to cached data:
+- `/api/campaigns` - Returns most recent campaign snapshot
+- `/api/planets` - Returns most recent planets snapshot
+- `/api/planets/{planet_index}` - Returns most recent planet status
+- `/api/factions` - Returns factions from latest war status
+- `/api/biomes` - Returns biomes from latest planet data
+
+These endpoints return **503 Service Unavailable** only when both the live API fails AND no cached data is available. This ensures maximum uptime and data availability.
 
 ## Background Data Collection
 
@@ -229,12 +245,13 @@ MIT
 
 Contributions are welcome! Please feel free to submit pull requests.
 
-## Troubleshooting
+### Troubleshooting
 
 ### No data available
-- Check that the API can reach `https://api.live.prod.theadultswim.com`
+- Check that the API can reach `https://api.helldivers2.dev`
 - Verify network connectivity and firewall settings
 - Check logs for specific error messages
+- If upstream API is down, endpoints with cache fallback will serve cached data (with 503 status if no cache exists)
 
 ### Database errors
 - Ensure write permissions to the database directory
@@ -243,3 +260,8 @@ Contributions are welcome! Please feel free to submit pull requests.
 ### Scheduler not running
 - Check logs for background scheduler errors
 - Verify APScheduler is properly installed
+
+### Understanding Error Codes
+- **404 Not Found**: Resource doesn't exist or no data has been collected yet
+- **503 Service Unavailable**: Upstream API is down and no cached data is available (for endpoints with cache fallback)
+- **500 Internal Server Error**: Unexpected server error occurred

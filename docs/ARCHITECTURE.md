@@ -108,10 +108,41 @@ high-command-api/
         Database     Scraper        Collector
        (database)   (scraper)     (collector)
            │              │              │
+           │              │              │
            ▼              ▼              ▼
-        SQLite      External API   Background
-        Storage    (Hell Divers 2)   Tasks
+      Cache/SQLite   External API   Background
+   (with fallback)  (Hell Divers 2)   Tasks
+                          │
+                          ├─ Success ──> set_upstream_status(True)
+                          └─ Failure ──> set_upstream_status(False)
 ```
+
+### Cache Fallback Flow
+
+For endpoints with cache fallback (`/api/campaigns`, `/api/planets`, etc.):
+
+```
+Client Request
+      │
+      ▼
+Try Live API (scraper.get_*)
+      │
+      ├─ Success ──> Return 200 with fresh data
+      │
+      └─ Failure (None returned)
+            │
+            ▼
+      Try Cache (db.get_latest_*_snapshot)
+            │
+            ├─ Cache Hit ──> Return 200 with cached data
+            │
+            └─ Cache Miss ──> Return 503 Service Unavailable
+```
+
+This pattern ensures:
+- Maximum uptime during upstream API outages
+- Transparent fallback to consumers (200 status for both live and cached)
+- Clear failure signal (503) when truly no data is available
 
 ## API Lifecycle
 
@@ -125,13 +156,17 @@ high-command-api/
 1. Collector runs `collect_all_data()`
 2. Scraper fetches data from Hell Divers 2 API
 3. Database stores the retrieved data
-4. Logging records the operation
+4. Collector updates system_status:
+   - `set_upstream_status(True)` on success
+   - `set_upstream_status(False)` on failure
+5. Logging records the operation
 
 ### Request Handling
 1. Client sends HTTP request
 2. FastAPI routes to appropriate handler
-3. Handler queries database or scraper
-4. Response returned to client
+3. Handler attempts to fetch live data (if applicable)
+4. On failure, handler may fall back to cached data
+5. Response returned to client (200 for success/cache, 503 for total failure, 404 for not found)
 
 ### Shutdown
 1. Shutdown signal received
@@ -148,6 +183,7 @@ CREATE TABLE war_status (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     data TEXT NOT NULL
 );
+CREATE INDEX idx_war_timestamp ON war_status(timestamp);
 ```
 
 ### statistics
@@ -160,6 +196,7 @@ CREATE TABLE statistics (
     missions_won INTEGER,
     data TEXT NOT NULL
 );
+CREATE INDEX idx_stats_timestamp ON statistics(timestamp);
 ```
 
 ### planet_status
@@ -173,6 +210,7 @@ CREATE TABLE planet_status (
     status TEXT,
     data TEXT NOT NULL
 );
+CREATE INDEX idx_planet_index ON planet_status(planet_index);
 ```
 
 ### campaigns
@@ -186,6 +224,58 @@ CREATE TABLE campaigns (
     data TEXT NOT NULL
 );
 ```
+
+### assignments
+```sql
+CREATE TABLE assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_id INTEGER UNIQUE,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    data TEXT NOT NULL
+);
+CREATE INDEX idx_assignment_timestamp ON assignments(timestamp);
+```
+
+### dispatches
+```sql
+CREATE TABLE dispatches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dispatch_id INTEGER UNIQUE,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    data TEXT NOT NULL
+);
+CREATE INDEX idx_dispatch_timestamp ON dispatches(timestamp);
+```
+
+### planet_events
+```sql
+CREATE TABLE planet_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER UNIQUE,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    data TEXT NOT NULL
+);
+CREATE INDEX idx_event_timestamp ON planet_events(timestamp);
+```
+
+### system_status
+**New in cache-fallback feature**: Tracks internal system metadata and upstream API health.
+
+```sql
+CREATE TABLE system_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    status_key TEXT UNIQUE,
+    status_value BOOLEAN,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_system_status_key ON system_status(status_key);
+```
+
+**Current status keys**:
+- `upstream_api_available`: Boolean tracking if Hell Divers 2 API is reachable
+  - Updated to `TRUE` after successful collection cycle
+  - Updated to `FALSE` after failed collection cycle
+  - Used for monitoring and alerting on upstream availability
 
 ## Design Patterns
 
