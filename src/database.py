@@ -108,6 +108,18 @@ class Database:
             """
             )
 
+            # System status table (for internal metadata like upstream API status)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS system_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    status_key TEXT UNIQUE,
+                    status_value BOOLEAN,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+
             # Index for faster queries
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_war_timestamp ON war_status(timestamp)")
             cursor.execute(
@@ -119,6 +131,7 @@ class Database:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_timestamp ON dispatches(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_timestamp ON planet_events(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_system_status_key ON system_status(status_key)")
 
             conn.commit()
 
@@ -356,3 +369,156 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get latest planet events: {e}")
             return []
+
+    def get_latest_planets_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all planets
+        
+        Used as fallback when live API is unavailable.
+        Returns all planet status records from the most recent collection cycle.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent timestamp from planet_status
+                cursor.execute("SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1")
+                result = cursor.fetchone()
+                
+                if not result:
+                    return None
+                
+                latest_timestamp = result[0]
+                
+                # Get all planets from that timestamp
+                cursor.execute(
+                    "SELECT data FROM planet_status WHERE timestamp = ? ORDER BY planet_index ASC",
+                    (latest_timestamp,),
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results] if results else None
+        except Exception as e:
+            logger.error(f"Failed to get latest planets snapshot: {e}")
+            return None
+
+    def get_latest_campaigns_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all campaigns
+        
+        Used as fallback when live API is unavailable.
+        Returns most recent campaign data for each campaign.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent campaign data for each campaign_id
+                cursor.execute(
+                    """SELECT data FROM campaigns 
+                       WHERE (campaign_id, timestamp) IN (
+                           SELECT campaign_id, MAX(timestamp) FROM campaigns GROUP BY campaign_id
+                       )
+                       ORDER BY timestamp DESC"""
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results] if results else None
+        except Exception as e:
+            logger.error(f"Failed to get latest campaigns snapshot: {e}")
+            return None
+
+    def get_latest_factions_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all factions
+        
+        Used as fallback when live API is unavailable.
+        Factions are extracted from war status data.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT data FROM war_status ORDER BY timestamp DESC LIMIT 1")
+                result = cursor.fetchone()
+                
+                if not result:
+                    return None
+                
+                war_data = json.loads(result[0])
+                return war_data.get("factions", None)
+        except Exception as e:
+            logger.error(f"Failed to get latest factions snapshot: {e}")
+            return None
+
+    def get_latest_biomes_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all biomes
+        
+        Used as fallback when live API is unavailable.
+        Biomes are extracted from planet data.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent timestamp from planet_status
+                cursor.execute("SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1")
+                result = cursor.fetchone()
+                
+                if not result:
+                    return None
+                
+                latest_timestamp = result[0]
+                
+                # Get all planets from that timestamp and extract unique biomes
+                cursor.execute(
+                    "SELECT data FROM planet_status WHERE timestamp = ?",
+                    (latest_timestamp,),
+                )
+                results = cursor.fetchall()
+                
+                if not results:
+                    return None
+                
+                # Extract unique biomes from planets
+                biomes = {}
+                for row in results:
+                    planet_data = json.loads(row[0])
+                    # Type guard: check if biome is a dict before accessing .get()
+                    if "biome" in planet_data and isinstance(planet_data["biome"], dict):
+                        biome_name = planet_data["biome"].get("name")
+                        if biome_name and biome_name not in biomes:
+                            biomes[biome_name] = planet_data["biome"]
+                
+                return list(biomes.values()) if biomes else None
+        except Exception as e:
+            logger.error(f"Failed to get latest biomes snapshot: {e}")
+            return None
+
+    def set_upstream_status(self, available: bool):
+        """Update upstream API availability status in system_status table"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Use INSERT OR REPLACE to upsert the status
+                cursor.execute(
+                    """INSERT OR REPLACE INTO system_status (status_key, status_value) 
+                       VALUES ('upstream_api_available', ?)""",
+                    (available,),
+                )
+                conn.commit()
+                logger.debug(f"Upstream API status set to: {available}")
+        except Exception as e:
+            logger.error(f"Failed to set upstream status: {e}")
+
+    def get_upstream_status(self) -> bool:
+        """Get last known upstream API status (defaults to True if no data)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the upstream API status
+                cursor.execute(
+                    """SELECT status_value FROM system_status 
+                       WHERE status_key = 'upstream_api_available' LIMIT 1"""
+                )
+                result = cursor.fetchone()
+                
+                if result:
+                    return bool(result[0])
+                
+                # Default to True if no status data found
+                return True
+        except Exception as e:
+            logger.error(f"Failed to get upstream status: {e}")
+            return True

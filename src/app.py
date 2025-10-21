@@ -80,11 +80,17 @@ async def refresh_war_status():
 
 @app.get("/api/campaigns", tags=["Campaigns"])
 async def get_campaigns():
-    """Get campaign information"""
+    """Get campaign information (with cache fallback)"""
+    # Try live API first
     data = scraper.get_campaign_info()
-    if data:
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        data = db.get_latest_campaigns_snapshot()
+    
+    if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch campaigns")
+    raise HTTPException(status_code=503, detail="No campaign data available (live fetch failed and no cached data)")
 
 
 @app.get("/api/campaigns/active", tags=["Campaigns"])
@@ -103,20 +109,36 @@ async def get_active_campaigns():
 
 @app.get("/api/planets", tags=["Planets"])
 async def get_planets():
-    """Get all planets"""
+    """Get all planets (with cache fallback)"""
+    # Try live API first
     data = scraper.get_planets()
-    if data:
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        data = db.get_latest_planets_snapshot()
+    
+    if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch planets")
+    raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}", tags=["Planets"])
 async def get_planet_status(planet_index: int):
-    """Get status of a specific planet"""
+    """Get status of a specific planet (with cache fallback)"""
+    # Try live API first
     data = collector.collect_planet_data(planet_index)
-    if data:
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        history = db.get_planet_status_history(planet_index, limit=1)
+        if history and isinstance(history[0], dict) and "data" in history[0]:
+            data = history[0]["data"]
+        elif history:
+            data = history[0]
+    
+    if data is not None:
         return data
-    raise HTTPException(status_code=404, detail=f"Failed to fetch planet {planet_index}")
+    raise HTTPException(status_code=503, detail=f"Failed to fetch planet {planet_index} and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}/history", tags=["Planets"])
@@ -168,11 +190,17 @@ async def refresh_statistics():
 
 @app.get("/api/factions", tags=["Factions"])
 async def get_factions():
-    """Get all factions"""
+    """Get all factions (with cache fallback)"""
+    # Try live API first
     data = scraper.get_factions()
-    if data:
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        data = db.get_latest_factions_snapshot()
+    
+    if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch factions")
+    raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
 
 
 # ========================
@@ -182,11 +210,17 @@ async def get_factions():
 
 @app.get("/api/biomes", tags=["Biomes"])
 async def get_biomes():
-    """Get all biomes"""
+    """Get all biomes (with cache fallback)"""
+    # Try live API first
     data = scraper.get_biomes()
-    if data:
+    
+    # Fallback to cache if live API fails
+    if data is None:
+        data = db.get_latest_biomes_snapshot()
+    
+    if data is not None:
         return data
-    raise HTTPException(status_code=404, detail="Failed to fetch biomes")
+    raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
 
 
 # ========================
@@ -197,7 +231,14 @@ async def get_biomes():
 @app.get("/api/health", tags=["Health"])
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "collector_running": collector.is_running}
+    # Returns local service status and upstream API status
+    # No external API calls made here to avoid blocking event loop or consuming rate limits
+    upstream_status = db.get_upstream_status()
+    return {
+        "status": "healthy",
+        "collector_running": collector.is_running,
+        "upstream_api": "online" if upstream_status else "offline"
+    }
 
 
 # ========================
