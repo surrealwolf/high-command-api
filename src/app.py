@@ -229,9 +229,14 @@ async def get_biomes():
 @app.get("/api/health", tags=["Health"])
 async def health_check():
     """Health check endpoint"""
-    # Returns local service status; upstream API status is tracked by collector
+    # Returns local service status and upstream API status
     # No external API calls made here to avoid blocking event loop or consuming rate limits
-    return {"status": "healthy", "collector_running": collector.is_running}
+    upstream_status = db.get_upstream_status()
+    return {
+        "status": "healthy",
+        "collector_running": collector.is_running,
+        "upstream_api": "online" if upstream_status else "offline"
+    }
 
 
 # ========================

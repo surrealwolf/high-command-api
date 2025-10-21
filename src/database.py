@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import logging
+import time
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -472,3 +473,40 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get latest biomes snapshot: {e}")
             return None
+
+    def set_upstream_status(self, available: bool):
+        """Update upstream API availability status"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Store upstream status with current timestamp
+                cursor.execute(
+                    """INSERT INTO war_status (data) VALUES (?)""",
+                    (json.dumps({"_upstream_status": available, "_timestamp": time.time()}),),
+                )
+                conn.commit()
+                logger.debug(f"Upstream API status set to: {available}")
+        except Exception as e:
+            logger.error(f"Failed to set upstream status: {e}")
+
+    def get_upstream_status(self) -> bool:
+        """Get last known upstream API status (defaults to True if no data)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent status entry
+                cursor.execute(
+                    "SELECT data FROM war_status WHERE json_extract(data, '$._upstream_status') IS NOT NULL ORDER BY timestamp DESC LIMIT 1"
+                )
+                result = cursor.fetchone()
+                
+                if result:
+                    data = json.loads(result[0])
+                    if "_upstream_status" in data:
+                        return data["_upstream_status"]
+                
+                # Default to True if no status data found
+                return True
+        except Exception as e:
+            logger.error(f"Failed to get upstream status: {e}")
+            return True

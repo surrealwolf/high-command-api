@@ -124,9 +124,13 @@ class DataCollector:
                 logger.warning("Failed to collect planet events")
 
             logger.info("Data collection cycle completed successfully")
+            # Mark upstream as available after successful collection
+            self.db.set_upstream_status(True)
 
         except Exception as e:
             logger.error(f"Error during data collection: {e}")
+            # Mark upstream as unavailable on any collection error
+            self.db.set_upstream_status(False)
 
     def collect_planet_data(self, planet_index: int):
         """Collect data for a specific planet"""
