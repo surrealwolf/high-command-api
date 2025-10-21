@@ -874,10 +874,24 @@ class TestAPIEndpoints:
 
     @pytest.fixture
     def client(self):
-        """Create test client"""
+        """Create test client with isolated database"""
+        # Create a temporary database for this test session
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as f:
+            test_db_path = f.name
+        
+        # Replace the global db instance with a test database
+        from src import app as app_module
+        original_db = app_module.db
+        app_module.db = Database(test_db_path)
+        
         # Use TestClient without lifespan to avoid starting the collector
         with TestClient(app) as client:
             yield client
+        
+        # Restore original db and cleanup
+        app_module.db = original_db
+        if os.path.exists(test_db_path):
+            os.unlink(test_db_path)
 
     def test_root_endpoint(self, client):
         """Test root endpoint"""
