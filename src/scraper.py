@@ -58,73 +58,65 @@ class HellDivers2Scraper:
                 time.sleep(delay)
             self.last_request_time = time.time()
 
+    def _fetch_with_backoff(self, url: str, max_retries: int = 5) -> Optional[Dict]:
+        """Fetch URL with exponential backoff on 429 errors
+        
+        Returns either a dict or list depending on the endpoint.
+        """
+        for attempt in range(max_retries):
+            try:
+                self._rate_limit()
+                response = self.session.get(url, timeout=self.timeout)
+                response.raise_for_status()
+                return response.json()
+            except requests.HTTPError as e:
+                if e.response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        # Exponential backoff: 2^attempt * 2 seconds (2s, 4s, 8s, 16s, 32s)
+                        backoff_delay = (2 ** attempt) * 2
+                        logger.warning(
+                            f"Rate limited (429). Attempt {attempt + 1}/{max_retries}. "
+                            f"Backing off for {backoff_delay}s before retry..."
+                        )
+                        time.sleep(backoff_delay)
+                    else:
+                        logger.error(f"Rate limited after {max_retries} attempts: {e}")
+                        return None
+                else:
+                    logger.error(f"HTTP error {e.response.status_code}: {e}")
+                    return None
+            except requests.RequestException as e:
+                logger.error(f"Request failed: {e}")
+                return None
+        return None
+
     def get_war_status(self) -> Optional[Dict]:
         """Fetch current war status"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/war", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch war status: {e}")
-            return None
+        return self._fetch_with_backoff(f"{self.base_url}/war")
 
     def get_campaign_info(self) -> Optional[List[Dict]]:
         """Fetch active campaigns information"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/campaigns", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch campaign info: {e}")
-            return None
+        result = self._fetch_with_backoff(f"{self.base_url}/campaigns")
+        return result if isinstance(result, list) else None
 
     def get_assignments(self) -> Optional[List[Dict]]:
         """Fetch current assignments (Major Orders)"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/assignments", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch assignments: {e}")
-            return None
+        result = self._fetch_with_backoff(f"{self.base_url}/assignments")
+        return result if isinstance(result, list) else None
 
     def get_dispatches(self) -> Optional[List[Dict]]:
         """Fetch news dispatches and announcements"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/dispatches", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch dispatches: {e}")
-            return None
+        result = self._fetch_with_backoff(f"{self.base_url}/dispatches")
+        return result if isinstance(result, list) else None
 
     def get_planets(self) -> Optional[List[Dict]]:
         """Fetch all planets information"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/planets", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch planets: {e}")
-            return None
+        result = self._fetch_with_backoff(f"{self.base_url}/planets")
+        return result if isinstance(result, list) else None
 
     def get_planet_status(self, planet_index: int) -> Optional[Dict]:
         """Fetch status of a specific planet"""
-        try:
-            self._rate_limit()
-            response = self.session.get(
-                f"{self.base_url}/planets/{planet_index}", timeout=self.timeout
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch planet status for {planet_index}: {e}")
-            return None
+        return self._fetch_with_backoff(f"{self.base_url}/planets/{planet_index}")
 
     def get_statistics(self) -> Optional[Dict]:
         """Fetch global game statistics (part of war status)"""
@@ -140,14 +132,8 @@ class HellDivers2Scraper:
 
     def get_planet_events(self) -> Optional[List[Dict]]:
         """Fetch planet events"""
-        try:
-            self._rate_limit()
-            response = self.session.get(f"{self.base_url}/planet-events", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch planet events: {e}")
-            return None
+        result = self._fetch_with_backoff(f"{self.base_url}/planet-events")
+        return result if isinstance(result, list) else None
 
     def get_factions(self) -> Optional[List[Dict]]:
         """Fetch all factions (from war data)"""
