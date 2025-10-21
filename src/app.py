@@ -90,7 +90,7 @@ async def get_campaigns():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch campaigns and no cached data available")
+    raise HTTPException(status_code=404, detail="No campaign data available (live fetch failed and no cached data)")
 
 
 @app.get("/api/campaigns/active", tags=["Campaigns"])
@@ -119,7 +119,7 @@ async def get_planets():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
+    raise HTTPException(status_code=404, detail="Failed to fetch planets and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}", tags=["Planets"])
@@ -129,14 +129,14 @@ async def get_planet_status(planet_index: int):
     data = collector.collect_planet_data(planet_index)
     
     # Fallback to cache if live API fails
-    if not data:
+    if data is None:
         history = db.get_planet_status_history(planet_index, limit=1)
         if history:
             data = history[0].get("data") if isinstance(history[0], dict) and "data" in history[0] else history[0]
     
-    if data:
+    if data is not None:
         return data
-    raise HTTPException(status_code=503, detail=f"Failed to fetch planet {planet_index} and no cached data available")
+    raise HTTPException(status_code=404, detail=f"Failed to fetch planet {planet_index} and no cached data available")
 
 
 @app.get("/api/planets/{planet_index}/history", tags=["Planets"])
@@ -198,7 +198,7 @@ async def get_factions():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
+    raise HTTPException(status_code=404, detail="Failed to fetch factions and no cached data available")
 
 
 # ========================
@@ -218,7 +218,7 @@ async def get_biomes():
     
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
+    raise HTTPException(status_code=404, detail="Failed to fetch biomes and no cached data available")
 
 
 # ========================
@@ -228,16 +228,10 @@ async def get_biomes():
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
-    """Health check endpoint with upstream API status"""
-    # Get cached upstream API status (set during data collection cycle)
-    # No extra API call needed - this is just reading the cached status
-    upstream_status = scraper.is_upstream_available()
-    
-    return {
-        "status": "healthy",
-        "collector_running": collector.is_running,
-        "upstream_api": "online" if upstream_status else "offline",
-    }
+    """Health check endpoint"""
+    # Returns local service status; upstream API status is tracked by collector
+    # No external API calls made here to avoid blocking event loop or consuming rate limits
+    return {"status": "healthy", "collector_running": collector.is_running}
 
 
 # ========================

@@ -49,86 +49,85 @@ class DataCollector:
         try:
             # Collect war status (this includes statistics)
             war_data = self.scraper.get_war_status()
-            if war_data:
-                success_count += 1
-                self.db.save_war_status(war_data)
-                logger.info("War status collected")
-                
-                # Extract and save statistics from war_data (no extra API call needed)
-                stats_data = war_data.get("statistics")
+            if war_data is not None:
+                if war_data:
+                    self.db.save_war_status(war_data)
+                    logger.info("War status collected")
+            else:
+                logger.warning("Failed to collect war status")
+
+            # Collect statistics (extracted from war status)
+            stats_data = self.scraper.get_statistics()
+            if stats_data is not None:
                 if stats_data:
                     self.db.save_statistics(stats_data)
                     logger.info("Statistics collected")
             else:
-                failure_count += 1
-                logger.warning("Failed to collect war status and statistics")
+                logger.warning("Failed to collect statistics")
 
             # Collect planets
             planets = self.scraper.get_planets()
-            if planets:
-                success_count += 1
-                for planet in planets:
-                    planet_index = planet.get("index")
-                    if planet_index:
-                        self.db.save_planet_status(planet_index, planet)
-                logger.info(f"Collected data for {len(planets)} planets")
+            if planets is not None:
+                if planets:
+                    for planet in planets:
+                        planet_index = planet.get("index")
+                        if planet_index:
+                            self.db.save_planet_status(planet_index, planet)
+                    logger.info(f"Collected data for {len(planets)} planets")
+                else:
+                    logger.info("Collected 0 planets (empty response)")
             else:
-                failure_count += 1
                 logger.warning("Failed to collect planets")
 
             # Collect campaigns
             campaigns = self.scraper.get_campaign_info()
-            if campaigns:
-                success_count += 1
-                for campaign in campaigns:
-                    campaign_id = campaign.get("id")
-                    if campaign_id and campaign.get("planet") and "index" in campaign["planet"]:
-                        planet_index = campaign["planet"].get("index")
-                        self.db.save_campaign(campaign_id, planet_index, campaign)
-                logger.info(f"Collected {len(campaigns)} campaigns")
+            if campaigns is not None:
+                if campaigns:
+                    for campaign in campaigns:
+                        campaign_id = campaign.get("id")
+                        if campaign_id and campaign.get("planet") and "index" in campaign["planet"]:
+                            planet_index = campaign["planet"].get("index")
+                            self.db.save_campaign(campaign_id, planet_index, campaign)
+                    logger.info(f"Collected {len(campaigns)} campaigns")
+                else:
+                    logger.info("Collected 0 campaigns (empty response)")
             else:
-                failure_count += 1
                 logger.warning("Failed to collect campaigns")
 
             # Collect assignments (Major Orders)
             assignments = self.scraper.get_assignments()
-            if assignments:
-                success_count += 1
-                self.db.save_assignments(assignments)
-                logger.info(f"Collected {len(assignments)} assignments")
+            if assignments is not None:
+                if assignments:
+                    self.db.save_assignments(assignments)
+                    logger.info(f"Collected {len(assignments)} assignments")
+                else:
+                    logger.info("Collected 0 assignments (empty response)")
             else:
-                failure_count += 1
                 logger.warning("Failed to collect assignments")
 
             # Collect dispatches (news)
             dispatches = self.scraper.get_dispatches()
-            if dispatches:
-                success_count += 1
-                self.db.save_dispatches(dispatches)
-                logger.info(f"Collected {len(dispatches)} dispatches")
+            if dispatches is not None:
+                if dispatches:
+                    self.db.save_dispatches(dispatches)
+                    logger.info(f"Collected {len(dispatches)} dispatches")
+                else:
+                    logger.info("Collected 0 dispatches (empty response)")
             else:
-                failure_count += 1
                 logger.warning("Failed to collect dispatches")
 
             # Collect planet events
             events = self.scraper.get_planet_events()
             if events is not None:
-                success_count += 1
-                self.db.save_planet_events(events)
-                logger.info(f"Collected {len(events)} planet events")
+                if events:
+                    self.db.save_planet_events(events)
+                    logger.info(f"Collected {len(events)} planet events")
+                else:
+                    logger.info("Collected 0 planet events (empty response)")
             else:
-                failure_count += 1
                 logger.warning("Failed to collect planet events")
 
-            # Update upstream API status: online only if all/most endpoints succeeded
-            # Mark offline if more than 2 endpoints failed (tolerance for occasional failures)
-            upstream_available = failure_count <= 2
-            self.scraper.set_upstream_status(upstream_available)
-            
-            if upstream_available:
-                logger.info(f"Data collection cycle completed: {success_count} succeeded, {failure_count} failed (API online)")
-            else:
-                logger.warning(f"Data collection cycle completed: {success_count} succeeded, {failure_count} failed (API marked offline)")
+            logger.info("Data collection cycle completed successfully")
 
         except Exception as e:
             logger.error(f"Error during data collection: {e}")

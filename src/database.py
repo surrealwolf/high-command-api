@@ -462,6 +462,7 @@ class Database:
                 biomes = {}
                 for row in results:
                     planet_data = json.loads(row[0])
+                    # Type guard: check if biome is a dict before accessing .get()
                     if "biome" in planet_data and isinstance(planet_data["biome"], dict):
                         biome_name = planet_data["biome"].get("name")
                         if biome_name and biome_name not in biomes:
@@ -471,4 +472,3 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get latest biomes snapshot: {e}")
             return None
-
