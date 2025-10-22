@@ -4,9 +4,7 @@ Test suite configuration and shared utilities for Hell Divers 2 API tests.
 Contains common testing utilities, mock helpers, and configuration.
 """
 
-import requests
 import json
-from unittest.mock import MagicMock
 
 API_BASE = "http://localhost:5000/api"
 

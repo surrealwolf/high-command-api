@@ -7,8 +7,7 @@ Tests API health, documentation endpoints, and system status.
 import requests
 from unittest.mock import patch, MagicMock
 from tests.conftest import (
-    API_BASE, print_header, print_section, print_success,
-    print_error, print_info, pretty_print_json
+    API_BASE, print_header, print_success, print_info, pretty_print_json
 )
 
 
