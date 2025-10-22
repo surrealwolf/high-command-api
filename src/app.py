@@ -103,6 +103,78 @@ async def get_active_campaigns():
 
 
 # ========================
+# Assignments Endpoints (Major Orders)
+# ========================
+
+
+@app.get("/api/assignments", tags=["Assignments"])
+async def get_assignments(limit: int = Query(10, ge=1, le=100)):
+    """Get current and recent assignments (Major Orders)"""
+    data = db.get_latest_assignments(limit)
+    if data:
+        return data
+    raise HTTPException(status_code=404, detail="No assignments available")
+
+
+@app.post("/api/assignments/refresh", tags=["Assignments"])
+async def refresh_assignments():
+    """Manually refresh assignments"""
+    data = scraper.get_assignments()
+    if data:
+        db.save_assignments(data)
+        return {"success": True, "data": data}
+    raise HTTPException(status_code=500, detail="Failed to fetch assignments")
+
+
+# ========================
+# Dispatches Endpoints (News/Announcements)
+# ========================
+
+
+@app.get("/api/dispatches", tags=["Dispatches"])
+async def get_dispatches(limit: int = Query(10, ge=1, le=100)):
+    """Get current and recent dispatches (news and announcements)"""
+    data = db.get_latest_dispatches(limit)
+    if data:
+        return data
+    raise HTTPException(status_code=404, detail="No dispatches available")
+
+
+@app.post("/api/dispatches/refresh", tags=["Dispatches"])
+async def refresh_dispatches():
+    """Manually refresh dispatches"""
+    data = scraper.get_dispatches()
+    if data:
+        db.save_dispatches(data)
+        return {"success": True, "data": data}
+    raise HTTPException(status_code=500, detail="Failed to fetch dispatches")
+
+
+# ========================
+# Planet Events Endpoints
+# ========================
+
+
+@app.get("/api/planet-events", tags=["Planets"])
+async def get_planet_events(limit: int = Query(10, ge=1, le=100)):
+    """Get current and recent planet events"""
+    data = db.get_latest_planet_events(limit)
+    if data:
+        return data
+    raise HTTPException(status_code=404, detail="No planet events available")
+
+
+@app.post("/api/planet-events/refresh", tags=["Planets"])
+async def refresh_planet_events():
+    """Manually refresh planet events"""
+    data = scraper.get_planet_events()
+    if data:
+        db.save_planet_events(data)
+        return {"success": True, "data": data}
+    raise HTTPException(status_code=500, detail="Failed to fetch planet events")
+
+
+# ========================
 # Planet Endpoints
 # ========================
 
