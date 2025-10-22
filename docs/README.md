@@ -119,7 +119,7 @@ Quick lookup card with:
 | **Database** | ✅ Functional | SQLite with 8 tables, indexes, and timestamp tracking |
 | **Collector** | ✅ Running | Every 5 minutes, background task, error tracked |
 | **Rate Limiting** | ✅ Active | 2-sec delays between requests, exponential backoff on 429 |
-| **Tests** | ✅ Passing | 14/14 tests (100%), mocked HTTP, no server dependency |
+| **Tests** | ✅ Passing | 16/16 tests (100%), organized by feature, mocked HTTP |
 | **Documentation** | ✅ Complete | 8 comprehensive guides organized in docs/ |
 | **Caching** | ✅ Active | SQLite persistence with fallback on upstream failure |
 
@@ -129,7 +129,7 @@ Quick lookup card with:
 |--------|-------|--------|
 | Upstream Methods Covered | 10/10 | ✅ 100% |
 | Downstream Endpoints | 20 | ✅ Complete |
-| API Test Coverage | 14/14 | ✅ 100% passing |
+| API Test Coverage | 16/16 | ✅ 100% passing |
 | Documentation Files | 8 | ✅ Comprehensive |
 
 ---

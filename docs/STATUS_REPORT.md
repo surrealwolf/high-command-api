@@ -6,7 +6,7 @@ The High Command API is a production-ready Hell Divers 2 game data backend with:
 
 - ✅ **20 API endpoints** (15 GET + 5 POST refresh)
 - ✅ **100% upstream alignment** (10/10 community API methods covered)
-- ✅ **14/14 tests passing** (comprehensive test coverage)
+- ✅ **16/16 tests passing** (comprehensive test coverage, organized by feature)
 - ✅ **8 comprehensive documentation files** (organized in docs/)
 - ✅ **SQLite caching** with automatic 5-minute collection
 - ✅ **Rate limiting** with exponential backoff
@@ -29,7 +29,7 @@ The High Command API is a production-ready Hell Divers 2 game data backend with:
 | **Factions** | 1 | ✅ Complete | 1/1 |
 | **Biomes** | 1 | ✅ Complete | 1/1 |
 | **Health & Info** | 2 | ✅ Complete | 2/2 |
-| **TOTAL** | **20** | ✅ **Complete** | **14/14** |
+| **TOTAL** | **20** | ✅ **Complete** | **16/16** |
 
 **Alignment**: 10/10 upstream methods covered (100%)
 
