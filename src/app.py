@@ -108,10 +108,33 @@ async def get_active_campaigns():
 
 
 @app.get("/api/assignments", tags=["Assignments"])
-async def get_assignments(limit: int = Query(10, ge=1, le=100)):
-    """Get current and recent assignments (Major Orders)"""
+async def get_assignments(
+    limit: int = Query(10, ge=1, le=100),
+    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    active_only: bool = Query(False),
+):
+    """Get current and recent assignments (Major Orders)
+    
+    Query Parameters:
+    - limit: Number of assignments to return (1-100, default: 10)
+    - sort: Sort order - 'newest' (default) or 'oldest'
+    - active_only: If true, return only active assignments
+    """
     data = db.get_latest_assignments(limit)
     if data:
+        # Filter active only if requested
+        if active_only:
+            if isinstance(data, dict) and "data" in data:
+                data["data"] = [a for a in data["data"] if not a.get("expired", False)]
+            elif isinstance(data, list):
+                data = [a for a in data if not a.get("expired", False)]
+        
+        # Apply sorting
+        if sort == "oldest" and isinstance(data, dict) and "data" in data:
+            data["data"] = list(reversed(data["data"]))
+        elif sort == "oldest" and isinstance(data, list):
+            data = list(reversed(data))
+        
         return data
     raise HTTPException(status_code=404, detail="No assignments available")
 
@@ -132,10 +155,40 @@ async def refresh_assignments():
 
 
 @app.get("/api/dispatches", tags=["Dispatches"])
-async def get_dispatches(limit: int = Query(10, ge=1, le=100)):
-    """Get current and recent dispatches (news and announcements)"""
+async def get_dispatches(
+    limit: int = Query(10, ge=1, le=100),
+    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    search: str = Query(None, min_length=1, max_length=100),
+):
+    """Get current and recent dispatches (news and announcements)
+    
+    Query Parameters:
+    - limit: Number of dispatches to return (1-100, default: 10)
+    - sort: Sort order - 'newest' (default) or 'oldest'
+    - search: Filter by text search in dispatch content
+    """
     data = db.get_latest_dispatches(limit)
     if data:
+        # Apply text search filter if provided
+        if search:
+            search_lower = search.lower()
+            if isinstance(data, dict) and "data" in data:
+                data["data"] = [
+                    d for d in data["data"]
+                    if search_lower in str(d).lower()
+                ]
+            elif isinstance(data, list):
+                data = [
+                    d for d in data
+                    if search_lower in str(d).lower()
+                ]
+        
+        # Apply sorting
+        if sort == "oldest" and isinstance(data, dict) and "data" in data:
+            data["data"] = list(reversed(data["data"]))
+        elif sort == "oldest" and isinstance(data, list):
+            data = list(reversed(data))
+        
         return data
     raise HTTPException(status_code=404, detail="No dispatches available")
 
@@ -156,11 +209,44 @@ async def refresh_dispatches():
 
 
 @app.get("/api/planet-events", tags=["Planets"])
-async def get_planet_events(limit: int = Query(10, ge=1, le=100)):
-    """Get current and recent planet events"""
+async def get_planet_events(
+    limit: int = Query(10, ge=1, le=100),
+    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    planet_index: int = Query(None, ge=0),
+    event_type: str = Query(None, regex="^(defense|offensive|both)$"),
+):
+    """Get current and recent planet events
+    
+    Query Parameters:
+    - limit: Number of events to return (1-100, default: 10)
+    - sort: Sort order - 'newest' (default) or 'oldest'
+    - planet_index: Filter by specific planet index
+    - event_type: Filter by event type - 'defense', 'offensive', or 'both' (default)
+    """
     data = db.get_latest_planet_events(limit)
     if data:
-        return data
+        events = data.get("data") if isinstance(data, dict) else data
+        if not isinstance(events, list):
+            events = [data] if data else []
+        
+        # Filter by planet index if provided
+        if planet_index is not None:
+            events = [e for e in events if e.get("planet_index") == planet_index]
+        
+        # Filter by event type if provided
+        if event_type and event_type != "both":
+            events = [e for e in events if e.get("event_type", "").lower() == event_type.lower()]
+        
+        # Apply sorting
+        if sort == "oldest":
+            events = list(reversed(events))
+        
+        # Return in same format as original data
+        if isinstance(data, dict):
+            data["data"] = events
+            return data
+        return events if events else data
+    
     raise HTTPException(status_code=404, detail="No planet events available")
 
 
