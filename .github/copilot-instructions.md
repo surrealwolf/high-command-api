@@ -85,7 +85,11 @@
 - **Route Organization**: Grouped by resource tags (`@app.get("/api/{resource}/{action}", tags=["ResourceName"])`)
 - **Response Format**: Raw JSON objects (no envelope); errors use FastAPI's `{"detail": "message"}` format
 - **Refresh Pattern**: Most resources have `/api/{resource}/refresh` POST endpoints for manual data collection
-- **Query Parameters**: Used with `Query()` for filtering (example: `@app.get("/api/planets", tags=["Planets"])`)
+- **Query Parameters**: Used with `Query()` for filtering and pagination
+  - **Assignments**: `limit`, `sort` (newest/oldest), `active_only` (bool)
+  - **Dispatches**: `limit`, `sort` (newest/oldest), `search` (text filter)
+  - **Planet Events**: `limit`, `sort` (newest/oldest), `planet_index`, `event_type` (defense/offensive/both)
+- **Filtering**: Server-side filtering for efficiency; all parameters optional with sensible defaults
 
 ### Database Conventions
 - **Auto-incrementing IDs**: `id INTEGER PRIMARY KEY AUTOINCREMENT` on all tables
