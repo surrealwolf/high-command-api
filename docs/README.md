@@ -62,6 +62,13 @@ Complete API documentation with:
 - Authentication (if applicable)
 - Rate limits and quotas
 
+### [FILTERING_ENHANCEMENTS.md](./FILTERING_ENHANCEMENTS.md) - Query Filtering
+Advanced filtering options for mission data:
+- Assignments: sort, active-only filtering
+- Dispatches: sort, text search filtering
+- Planet Events: sort, location filtering, event type filtering
+- Designed for both MCP and website use cases
+
 ### [QUICKREF.md](./QUICKREF.md) - Quick Reference
 Quick lookup card with:
 - Common curl commands
@@ -176,7 +183,7 @@ curl http://localhost:5000/api/assignments?limit=5
 
 ---
 
-## � File Organization
+## 📋 File Organization
 
 ### Documentation Structure
 ```
@@ -187,6 +194,7 @@ docs/
 ├── ARCHITECTURE.md        ← System design and data flow
 ├── DEVELOPMENT.md         ← Local development setup
 ├── DEPLOYMENT.md          ← Production deployment guide
+├── FILTERING_ENHANCEMENTS.md ← Query filtering for missions/events
 ├── API.md                 ← Full API documentation
 └── QUICKREF.md            ← Quick reference card
 ```
