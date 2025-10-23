@@ -345,6 +345,10 @@ class Database:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+                # Create index on published date for better performance if not exists
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_dispatches_published ON dispatches(json_extract(data, '$.published'))"
+                )
                 cursor.execute(
                     "SELECT data FROM dispatches ORDER BY json_extract(data, '$.published') DESC LIMIT ?",
                     (limit,),

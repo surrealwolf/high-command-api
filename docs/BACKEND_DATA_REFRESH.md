@@ -187,8 +187,8 @@ sqlite3 helldivers2.db
 .tables
 .schema dispatches
 
-# See latest dispatches
-SELECT * FROM dispatches ORDER BY timestamp DESC LIMIT 5;
+# See latest dispatches sorted by published date
+SELECT * FROM dispatches ORDER BY json_extract(data, '$.published') DESC LIMIT 5;
 
 # Count total dispatches
 SELECT COUNT(*) FROM dispatches;
