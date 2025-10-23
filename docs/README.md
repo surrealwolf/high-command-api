@@ -69,6 +69,15 @@ Advanced filtering options for mission data:
 - Planet Events: sort, location filtering, event type filtering
 - Designed for both MCP and website use cases
 
+### [BACKEND_DATA_REFRESH.md](./BACKEND_DATA_REFRESH.md) - Backend Data & Collector
+Backend data collection and troubleshooting:
+- Background collector scheduling (every 5 minutes)
+- Manual refresh endpoints for testing
+- Database data freshness verification
+- Troubleshooting stale or missing data
+- Upstream API connectivity checking
+- Perfect for when data seems outdated
+
 ### [QUICKREF.md](./QUICKREF.md) - Quick Reference
 Quick lookup card with:
 - Common curl commands
@@ -92,6 +101,8 @@ Quick lookup card with:
 | Configure settings | [CONFIGURATION.md](./CONFIGURATION.md) (if exists) |
 | Quick command reference | [QUICKREF.md](./QUICKREF.md) |
 | Debug integration issues | [ARCHITECTURE.md](./ARCHITECTURE.md) → [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
+| Debug stale/missing data | [BACKEND_DATA_REFRESH.md](./BACKEND_DATA_REFRESH.md) |
+| Verify collector status | [BACKEND_DATA_REFRESH.md](./BACKEND_DATA_REFRESH.md) |
 
 ### By Component
 
@@ -100,10 +111,11 @@ Quick lookup card with:
 | **API Endpoints** (FastAPI) | [ENDPOINTS.md](./ENDPOINTS.md) + [API.md](./API.md) |
 | **Data Scraper** (HTTP client) | [IMPLEMENTATION.md](./IMPLEMENTATION.md) (rate limiting section) |
 | **Database** (SQLite) | [IMPLEMENTATION.md](./IMPLEMENTATION.md) (database schema & CRUD) |
-| **Background Collector** | [ARCHITECTURE.md](./ARCHITECTURE.md) + [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
+| **Background Collector** | [ARCHITECTURE.md](./ARCHITECTURE.md) + [IMPLEMENTATION.md](./IMPLEMENTATION.md) + [BACKEND_DATA_REFRESH.md](./BACKEND_DATA_REFRESH.md) |
 | **Rate Limiting** | [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
 | **Error Handling** | [IMPLEMENTATION.md](./IMPLEMENTATION.md) + [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | **Caching & Fallback** | [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
+| **Data Freshness** | [BACKEND_DATA_REFRESH.md](./BACKEND_DATA_REFRESH.md) |
 
 ### By Audience
 
