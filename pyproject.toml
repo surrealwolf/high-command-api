@@ -76,5 +76,14 @@ ignore_missing_imports = true
 minversion = "7.0"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py", "demo.py"]
-addopts = "-v --cov=src --cov-report=xml --cov-report=html"
+addopts = "-v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80"
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false

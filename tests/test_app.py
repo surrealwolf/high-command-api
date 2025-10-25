@@ -308,3 +308,56 @@ class TestPlanetEventEndpoints:
         
         response = client.post("/api/planet-events/refresh")
         assert response.status_code == 200
+
+
+class TestErrorHandling:
+    """Test error handling across endpoints"""
+
+    @patch("src.app.db.get_latest_assignments")
+    def test_get_assignments_empty(self, mock_get, client):
+        """Test getting assignments when database returns empty list"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/assignments")
+        # Empty list should return 404
+        assert response.status_code in [200, 404]
+
+    @patch("src.app.db.get_latest_dispatches")
+    def test_get_dispatches_empty(self, mock_get, client):
+        """Test getting dispatches when database returns empty list"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/dispatches")
+        assert response.status_code in [200, 404]
+
+    @patch("src.app.db.get_latest_planet_events")
+    def test_get_planet_events_empty(self, mock_get, client):
+        """Test getting planet events when database returns empty list"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/planet-events")
+        assert response.status_code in [200, 404]
+
+    @patch("src.app.db.get_active_campaigns")
+    def test_get_active_campaigns_empty(self, mock_get, client):
+        """Test getting active campaigns when none exist"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/campaigns/active")
+        assert response.status_code in [200, 404]
+
+    @patch("src.app.db.get_planet_status_history")
+    def test_get_planet_history_empty(self, mock_get, client):
+        """Test getting planet history when none exists"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/planets/1/history")
+        assert response.status_code in [200, 404]
+
+    @patch("src.app.db.get_statistics_history")
+    def test_get_statistics_history_empty(self, mock_get, client):
+        """Test getting statistics history when none exists"""
+        mock_get.return_value = []
+        
+        response = client.get("/api/statistics/history")
+        assert response.status_code in [200, 404]

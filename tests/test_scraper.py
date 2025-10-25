@@ -273,3 +273,87 @@ class TestScraperCleanup:
             scraper = HellDivers2Scraper()
             scraper.close()
             mock_close.assert_called_once()
+
+
+class TestScraperEdgeCases:
+    """Test scraper edge cases"""
+
+    @patch.object(HellDivers2Scraper, "_fetch_with_backoff")
+    def test_get_war_status_wrong_type(self, mock_fetch):
+        """Test get_war_status with wrong return type"""
+        mock_fetch.return_value = ["not", "a", "dict"]
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_war_status()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "_fetch_with_backoff")
+    def test_get_planets_wrong_type(self, mock_fetch):
+        """Test get_planets with wrong return type"""
+        mock_fetch.return_value = {"not": "a list"}
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_planets()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "_fetch_with_backoff")
+    def test_get_campaign_info_wrong_type(self, mock_fetch):
+        """Test get_campaign_info with wrong return type"""
+        mock_fetch.return_value = "not a list"
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_campaign_info()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "get_war_status")
+    def test_get_statistics_no_stats(self, mock_war):
+        """Test get_statistics when war status has no statistics"""
+        mock_war.return_value = {"war_id": 1}
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_statistics()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "get_war_status")
+    def test_get_factions_no_factions(self, mock_war):
+        """Test get_factions when war status has no factions"""
+        mock_war.return_value = {"war_id": 1}
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_factions()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "get_planets")
+    def test_get_biomes_no_planets(self, mock_planets):
+        """Test get_biomes when no planets returned"""
+        mock_planets.return_value = None
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_biomes()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "get_planets")
+    def test_get_biomes_empty_list(self, mock_planets):
+        """Test get_biomes with empty planet list"""
+        mock_planets.return_value = []
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_biomes()
+        
+        assert result is None
+
+    @patch.object(HellDivers2Scraper, "get_planets")
+    def test_get_biomes_no_biome_data(self, mock_planets):
+        """Test get_biomes when planets have no biome data"""
+        mock_planets.return_value = [{"index": 1, "name": "Planet"}]
+        
+        scraper = HellDivers2Scraper(base_url="https://api.example.com")
+        result = scraper.get_biomes()
+        
+        assert result is None
