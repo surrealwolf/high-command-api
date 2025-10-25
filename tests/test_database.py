@@ -21,7 +21,7 @@ def temp_db():
     yield db
     try:
         os.unlink(path)
-    except:
+    except OSError:
         pass
 
 
@@ -34,7 +34,7 @@ class TestDatabaseInit:
         os.close(fd)
         os.unlink(path)
         
-        db = Database(db_path=path)
+        Database(db_path=path)
         assert os.path.exists(path)
         os.unlink(path)
 

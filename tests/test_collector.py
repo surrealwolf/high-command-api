@@ -5,7 +5,7 @@ Tests data collection scheduling, error handling, and lifecycle.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 from src.collector import DataCollector
 from src.database import Database
 from src.scraper import HellDivers2Scraper

@@ -4,9 +4,8 @@ Unit tests for scraper module.
 Tests HTTP client, rate limiting, error handling, and data fetching.
 """
 
-import pytest
 import time
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 import requests
 from src.scraper import HellDivers2Scraper
 

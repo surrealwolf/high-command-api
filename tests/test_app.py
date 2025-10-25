@@ -6,10 +6,8 @@ Tests API routes, error handling, and cache fallback.
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from src.app import app
-from src.database import Database
-from src.scraper import HellDivers2Scraper
 
 
 @pytest.fixture

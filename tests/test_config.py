@@ -5,7 +5,6 @@ Tests configuration loading, defaults, and environment variable handling.
 """
 
 import os
-import pytest
 from unittest.mock import patch
 from src.config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
 
