@@ -110,7 +110,7 @@ async def get_active_campaigns():
 @app.get("/api/assignments", tags=["Assignments"])
 async def get_assignments(
     limit: int = Query(10, ge=1, le=100),
-    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    sort: str = Query("newest", pattern="^(newest|oldest)$"),
     active_only: bool = Query(False),
 ):
     """Get current and recent assignments (Major Orders)
@@ -157,7 +157,7 @@ async def refresh_assignments():
 @app.get("/api/dispatches", tags=["Dispatches"])
 async def get_dispatches(
     limit: int = Query(10, ge=1, le=100),
-    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    sort: str = Query("newest", pattern="^(newest|oldest)$"),
     search: str = Query(None, min_length=1, max_length=100),
 ):
     """Get current and recent dispatches (news and announcements)
@@ -211,9 +211,9 @@ async def refresh_dispatches():
 @app.get("/api/planet-events", tags=["Planets"])
 async def get_planet_events(
     limit: int = Query(10, ge=1, le=100),
-    sort: str = Query("newest", regex="^(newest|oldest)$"),
+    sort: str = Query("newest", pattern="^(newest|oldest)$"),
     planet_index: int = Query(None, ge=0),
-    event_type: str = Query(None, regex="^(defense|offensive|both)$"),
+    event_type: str = Query(None, pattern="^(defense|offensive|both)$"),
 ):
     """Get current and recent planet events
     
