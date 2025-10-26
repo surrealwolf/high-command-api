@@ -46,7 +46,7 @@ class TestCollectorLifecycle:
         """Test starting collector"""
         collector = DataCollector(mock_db, interval=300)
         collector.start()
-        
+
         assert collector.is_running is True
         collector.stop()
 
@@ -54,7 +54,7 @@ class TestCollectorLifecycle:
         """Test starting collector when already running"""
         collector = DataCollector(mock_db, interval=300)
         collector.start()
-        
+
         # Try starting again - should not error
         collector.start()
         assert collector.is_running is True
@@ -65,7 +65,7 @@ class TestCollectorLifecycle:
         collector = DataCollector(mock_db, interval=300)
         collector.start()
         collector.stop()
-        
+
         assert collector.is_running is False
 
     def test_stop_not_running(self, mock_db):
@@ -87,10 +87,10 @@ class TestDataCollection:
         mock_war.return_value = {"war_id": 1}
         mock_stats.return_value = {"total_players": 1000}
         mock_planets.return_value = [{"index": 1, "name": "Planet 1"}]
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Verify database save methods were called
         mock_db.save_war_status.assert_called_once()
         mock_db.save_statistics.assert_called_once()
@@ -99,10 +99,10 @@ class TestDataCollection:
     def test_collect_war_status_failure(self, mock_war, mock_db):
         """Test collection continues when war status fails"""
         mock_war.return_value = None
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Should not call save_war_status if data is None
         mock_db.save_war_status.assert_not_called()
 
@@ -110,23 +110,21 @@ class TestDataCollection:
     def test_collect_empty_planets(self, mock_planets, mock_db):
         """Test collection with empty planet list"""
         mock_planets.return_value = []
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Should handle empty list gracefully
         assert True
 
     @patch.object(HellDivers2Scraper, "get_campaign_info")
     def test_collect_campaigns(self, mock_campaigns, mock_db):
         """Test campaign collection"""
-        mock_campaigns.return_value = [
-            {"id": 1, "planet": {"index": 5}}
-        ]
-        
+        mock_campaigns.return_value = [{"id": 1, "planet": {"index": 5}}]
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Verify campaign was saved
         mock_db.save_campaign.assert_called()
 
@@ -134,30 +132,30 @@ class TestDataCollection:
     def test_collect_assignments(self, mock_assignments, mock_db):
         """Test assignments collection"""
         mock_assignments.return_value = [{"id": 1, "title": "Major Order"}]
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         mock_db.save_assignments.assert_called_once()
 
     @patch.object(HellDivers2Scraper, "get_dispatches")
     def test_collect_dispatches(self, mock_dispatches, mock_db):
         """Test dispatches collection"""
         mock_dispatches.return_value = [{"id": 1, "message": "News"}]
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         mock_db.save_dispatches.assert_called_once()
 
     @patch.object(HellDivers2Scraper, "get_planet_events")
     def test_collect_planet_events(self, mock_events, mock_db):
         """Test planet events collection"""
         mock_events.return_value = [{"id": 1, "planetIndex": 5}]
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         mock_db.save_planet_events.assert_called_once()
 
 
@@ -168,7 +166,7 @@ class TestErrorHandling:
     def test_collection_with_exception(self, mock_war, mock_db):
         """Test collection handles exceptions gracefully"""
         mock_war.side_effect = Exception("API Error")
-        
+
         collector = DataCollector(mock_db, interval=300)
         # Should not raise exception
         collector.collect_all_data()
@@ -179,7 +177,7 @@ class TestErrorHandling:
         """Test collection handles database errors"""
         mock_planets.return_value = [{"index": 1}]
         mock_db.save_planet_status.side_effect = Exception("DB Error")
-        
+
         collector = DataCollector(mock_db, interval=300)
         # Should handle error and continue
         collector.collect_all_data()
@@ -196,8 +194,17 @@ class TestUpstreamStatusTracking:
     @patch.object(HellDivers2Scraper, "get_assignments")
     @patch.object(HellDivers2Scraper, "get_dispatches")
     @patch.object(HellDivers2Scraper, "get_planet_events")
-    def test_upstream_status_success(self, mock_events, mock_dispatches, mock_assign, 
-                                     mock_camp, mock_planets, mock_stats, mock_war, mock_db):
+    def test_upstream_status_success(
+        self,
+        mock_events,
+        mock_dispatches,
+        mock_assign,
+        mock_camp,
+        mock_planets,
+        mock_stats,
+        mock_war,
+        mock_db,
+    ):
         """Test upstream status is set to True on successful collection"""
         # Return valid data for all endpoints
         mock_war.return_value = {"war_id": 1}
@@ -207,10 +214,10 @@ class TestUpstreamStatusTracking:
         mock_assign.return_value = []
         mock_dispatches.return_value = []
         mock_events.return_value = []
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Verify upstream status was set to True
         mock_db.set_upstream_status.assert_called_with(True)
 
@@ -221,14 +228,23 @@ class TestUpstreamStatusTracking:
     @patch.object(HellDivers2Scraper, "get_assignments")
     @patch.object(HellDivers2Scraper, "get_dispatches")
     @patch.object(HellDivers2Scraper, "get_planet_events")
-    def test_upstream_status_failure(self, mock_events, mock_dispatches, mock_assign,
-                                     mock_camp, mock_planets, mock_stats, mock_war, mock_db):
+    def test_upstream_status_failure(
+        self,
+        mock_events,
+        mock_dispatches,
+        mock_assign,
+        mock_camp,
+        mock_planets,
+        mock_stats,
+        mock_war,
+        mock_db,
+    ):
         """Test upstream status is set to False on exception"""
         # Cause an exception during collection
         mock_war.side_effect = Exception("API Error")
-        
+
         collector = DataCollector(mock_db, interval=300)
         collector.collect_all_data()
-        
+
         # Verify upstream status was set to False due to exception
         mock_db.set_upstream_status.assert_called_with(False)

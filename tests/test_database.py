@@ -37,14 +37,14 @@ class TestDatabaseInit:
         fd, path = tempfile.mkstemp(suffix=".db")
         os.close(fd)
         os.unlink(path)
-        
+
         db = Database(db_path=path)
         assert os.path.exists(path)
-        
+
         # Ensure all connections are closed before cleanup
         # On Windows, files may still be locked even after context manager exits
         del db
-        
+
         # Retry cleanup with error handling for Windows file locking
         try:
             os.unlink(path)
@@ -58,7 +58,7 @@ class TestDatabaseInit:
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = [row[0] for row in cursor.fetchall()]
-            
+
             assert "war_status" in tables
             assert "statistics" in tables
             assert "planet_status" in tables
@@ -76,7 +76,7 @@ class TestWarStatus:
         """Test saving war status data"""
         data = {"war_id": 1, "status": "active"}
         temp_db.save_war_status(data)
-        
+
         result = temp_db.get_latest_war_status()
         assert result is not None
         assert result["war_id"] == 1
@@ -92,13 +92,9 @@ class TestStatistics:
 
     def test_save_statistics(self, temp_db):
         """Test saving statistics data"""
-        data = {
-            "total_players": 1000,
-            "total_kills": 50000,
-            "missions_won": 2000
-        }
+        data = {"total_players": 1000, "total_kills": 50000, "missions_won": 2000}
         temp_db.save_statistics(data)
-        
+
         result = temp_db.get_latest_statistics()
         assert result is not None
         assert result["total_players"] == 1000
@@ -114,15 +110,10 @@ class TestPlanetStatus:
 
     def test_save_planet_status(self, temp_db):
         """Test saving planet status"""
-        planet_data = {
-            "index": 5,
-            "name": "Test Planet",
-            "owner": "Humans",
-            "status": "controlled"
-        }
+        planet_data = {"index": 5, "name": "Test Planet", "owner": "Humans", "status": "controlled"}
         result = temp_db.save_planet_status(5, planet_data)
         assert result is True
-        
+
         history = temp_db.get_planet_status_history(5, limit=1)
         assert len(history) > 0
 
@@ -130,7 +121,7 @@ class TestPlanetStatus:
         """Test getting planet status history"""
         planet_data = {"index": 5, "name": "Test Planet"}
         temp_db.save_planet_status(5, planet_data)
-        
+
         result = temp_db.get_planet_status_history(5)
         assert result is not None
         assert len(result) > 0
@@ -139,7 +130,7 @@ class TestPlanetStatus:
         """Test getting all planets snapshot"""
         temp_db.save_planet_status(1, {"index": 1, "name": "Planet 1"})
         temp_db.save_planet_status(2, {"index": 2, "name": "Planet 2"})
-        
+
         result = temp_db.get_latest_planets_snapshot()
         assert result is not None
         assert isinstance(result, list)
@@ -157,7 +148,7 @@ class TestCampaigns:
     def test_get_active_campaigns(self, temp_db):
         """Test getting active campaigns"""
         temp_db.save_campaign(1, 5, {"id": 1, "planet": {"index": 5}})
-        
+
         result = temp_db.get_active_campaigns()
         assert result is not None
         assert isinstance(result, list)
@@ -165,7 +156,7 @@ class TestCampaigns:
     def test_get_latest_campaigns_snapshot(self, temp_db):
         """Test getting latest campaigns snapshot"""
         temp_db.save_campaign(1, 5, {"id": 1, "planet": {"index": 5}})
-        
+
         result = temp_db.get_latest_campaigns_snapshot()
         assert result is not None
         assert isinstance(result, list)
@@ -176,12 +167,10 @@ class TestAssignments:
 
     def test_save_assignments(self, temp_db):
         """Test saving assignments"""
-        assignments = [
-            {"id": 1, "title": "Major Order 1", "description": "Test"}
-        ]
+        assignments = [{"id": 1, "title": "Major Order 1", "description": "Test"}]
         result = temp_db.save_assignments(assignments)
         assert result is True
-        
+
         retrieved = temp_db.get_latest_assignments()
         assert len(retrieved) > 0
 
@@ -190,10 +179,10 @@ class TestAssignments:
         assignments = [
             {"id": 1, "title": "Order 1"},
             {"id": 2, "title": "Order 2"},
-            {"id": 3, "title": "Order 3"}
+            {"id": 3, "title": "Order 3"},
         ]
         temp_db.save_assignments(assignments)
-        
+
         result = temp_db.get_latest_assignments(limit=2)
         assert len(result) <= 2
 
@@ -203,12 +192,10 @@ class TestDispatches:
 
     def test_save_dispatches(self, temp_db):
         """Test saving dispatches"""
-        dispatches = [
-            {"id": 1, "message": "News 1"}
-        ]
+        dispatches = [{"id": 1, "message": "News 1"}]
         result = temp_db.save_dispatches(dispatches)
         assert result is True
-        
+
         retrieved = temp_db.get_latest_dispatches()
         assert len(retrieved) > 0
 
@@ -216,10 +203,10 @@ class TestDispatches:
         """Test getting dispatches with limit"""
         dispatches = [
             {"id": 1, "message": "Important news"},
-            {"id": 2, "message": "Regular update"}
+            {"id": 2, "message": "Regular update"},
         ]
         temp_db.save_dispatches(dispatches)
-        
+
         result = temp_db.get_latest_dispatches(limit=1)
         assert len(result) <= 1
 
@@ -229,12 +216,10 @@ class TestPlanetEvents:
 
     def test_save_planet_events(self, temp_db):
         """Test saving planet events"""
-        events = [
-            {"id": 1, "planetIndex": 5, "eventType": "storm"}
-        ]
+        events = [{"id": 1, "planetIndex": 5, "eventType": "storm"}]
         result = temp_db.save_planet_events(events)
         assert result is True
-        
+
         retrieved = temp_db.get_latest_planet_events()
         assert len(retrieved) > 0
 
@@ -242,10 +227,10 @@ class TestPlanetEvents:
         """Test getting planet events with limit"""
         events = [
             {"id": 1, "planetIndex": 5, "eventType": "storm"},
-            {"id": 2, "planetIndex": 10, "eventType": "meteor"}
+            {"id": 2, "planetIndex": 10, "eventType": "meteor"},
         ]
         temp_db.save_planet_events(events)
-        
+
         result = temp_db.get_latest_planet_events(limit=1)
         assert len(result) <= 1
 
@@ -264,7 +249,7 @@ class TestSystemStatus:
         temp_db.set_upstream_status(True)
         result = temp_db.get_upstream_status()
         assert result is True
-        
+
         temp_db.set_upstream_status(False)
         result = temp_db.get_upstream_status()
         assert result is False
@@ -283,7 +268,7 @@ class TestCacheFallback:
         """Test getting latest planets snapshot"""
         temp_db.save_planet_status(1, {"index": 1, "name": "Planet 1"})
         temp_db.save_planet_status(2, {"index": 2, "name": "Planet 2"})
-        
+
         result = temp_db.get_latest_planets_snapshot()
         assert result is not None
         assert isinstance(result, list)
@@ -293,7 +278,7 @@ class TestCacheFallback:
         """Test getting latest factions snapshot"""
         war_data = {"factions": [{"id": 1, "name": "Terminids"}]}
         temp_db.save_war_status(war_data)
-        
+
         result = temp_db.get_latest_factions_snapshot()
         assert result is not None
         assert isinstance(result, list)
@@ -303,7 +288,7 @@ class TestCacheFallback:
         # Save planets with biomes
         temp_db.save_planet_status(1, {"index": 1, "biome": {"name": "Desert"}})
         temp_db.save_planet_status(2, {"index": 2, "biome": {"name": "Ice"}})
-        
+
         result = temp_db.get_latest_biomes_snapshot()
         assert result is not None
         assert isinstance(result, list)

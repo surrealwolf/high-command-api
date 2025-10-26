@@ -83,14 +83,16 @@ async def get_campaigns():
     """Get campaign information (with cache fallback)"""
     # Try live API first
     data = scraper.get_campaign_info()
-    
+
     # Fallback to cache if live API fails
     if data is None:
         data = db.get_latest_campaigns_snapshot()
-    
+
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="No campaign data available (live fetch failed and no cached data)")
+    raise HTTPException(
+        status_code=503, detail="No campaign data available (live fetch failed and no cached data)"
+    )
 
 
 @app.get("/api/campaigns/active", tags=["Campaigns"])
@@ -114,7 +116,7 @@ async def get_assignments(
     active_only: bool = Query(False),
 ):
     """Get current and recent assignments (Major Orders)
-    
+
     Query Parameters:
     - limit: Number of assignments to return (1-100, default: 10)
     - sort: Sort order - 'newest' (default) or 'oldest'
@@ -128,13 +130,13 @@ async def get_assignments(
                 data["data"] = [a for a in data["data"] if not a.get("expired", False)]
             elif isinstance(data, list):
                 data = [a for a in data if not a.get("expired", False)]
-        
+
         # Apply sorting
         if sort == "oldest" and isinstance(data, dict) and "data" in data:
             data["data"] = list(reversed(data["data"]))
         elif sort == "oldest" and isinstance(data, list):
             data = list(reversed(data))
-        
+
         return data
     raise HTTPException(status_code=404, detail="No assignments available")
 
@@ -161,7 +163,7 @@ async def get_dispatches(
     search: str = Query(None, min_length=1, max_length=100),
 ):
     """Get current and recent dispatches (news and announcements)
-    
+
     Query Parameters:
     - limit: Number of dispatches to return (1-100, default: 10)
     - sort: Sort order - 'newest' (default) or 'oldest'
@@ -173,22 +175,16 @@ async def get_dispatches(
         if search:
             search_lower = search.lower()
             if isinstance(data, dict) and "data" in data:
-                data["data"] = [
-                    d for d in data["data"]
-                    if search_lower in str(d).lower()
-                ]
+                data["data"] = [d for d in data["data"] if search_lower in str(d).lower()]
             elif isinstance(data, list):
-                data = [
-                    d for d in data
-                    if search_lower in str(d).lower()
-                ]
-        
+                data = [d for d in data if search_lower in str(d).lower()]
+
         # Apply sorting
         if sort == "oldest" and isinstance(data, dict) and "data" in data:
             data["data"] = list(reversed(data["data"]))
         elif sort == "oldest" and isinstance(data, list):
             data = list(reversed(data))
-        
+
         return data
     raise HTTPException(status_code=404, detail="No dispatches available")
 
@@ -216,7 +212,7 @@ async def get_planet_events(
     event_type: str = Query(None, pattern="^(defense|offensive|both)$"),
 ):
     """Get current and recent planet events
-    
+
     Query Parameters:
     - limit: Number of events to return (1-100, default: 10)
     - sort: Sort order - 'newest' (default) or 'oldest'
@@ -228,25 +224,25 @@ async def get_planet_events(
         events = data.get("data") if isinstance(data, dict) else data
         if not isinstance(events, list):
             events = [data] if data else []
-        
+
         # Filter by planet index if provided
         if planet_index is not None:
             events = [e for e in events if e.get("planet_index") == planet_index]
-        
+
         # Filter by event type if provided
         if event_type and event_type != "both":
             events = [e for e in events if e.get("event_type", "").lower() == event_type.lower()]
-        
+
         # Apply sorting
         if sort == "oldest":
             events = list(reversed(events))
-        
+
         # Return in same format as original data
         if isinstance(data, dict):
             data["data"] = events
             return data
         return events if events else data
-    
+
     raise HTTPException(status_code=404, detail="No planet events available")
 
 
@@ -270,14 +266,16 @@ async def get_planets():
     """Get all planets (with cache fallback)"""
     # Try live API first
     data = scraper.get_planets()
-    
+
     # Fallback to cache if live API fails
     if data is None:
         data = db.get_latest_planets_snapshot()
-    
+
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch planets and no cached data available")
+    raise HTTPException(
+        status_code=503, detail="Failed to fetch planets and no cached data available"
+    )
 
 
 @app.get("/api/planets/{planet_index}", tags=["Planets"])
@@ -285,7 +283,7 @@ async def get_planet_status(planet_index: int):
     """Get status of a specific planet (with cache fallback)"""
     # Try live API first
     data = collector.collect_planet_data(planet_index)
-    
+
     # Fallback to cache if live API fails
     if data is None:
         history = db.get_planet_status_history(planet_index, limit=1)
@@ -293,10 +291,13 @@ async def get_planet_status(planet_index: int):
             data = history[0]["data"]
         elif history:
             data = history[0]
-    
+
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail=f"Failed to fetch planet {planet_index} and no cached data available")
+    raise HTTPException(
+        status_code=503,
+        detail=f"Failed to fetch planet {planet_index} and no cached data available",
+    )
 
 
 @app.get("/api/planets/{planet_index}/history", tags=["Planets"])
@@ -351,14 +352,16 @@ async def get_factions():
     """Get all factions (with cache fallback)"""
     # Try live API first
     data = scraper.get_factions()
-    
+
     # Fallback to cache if live API fails
     if data is None:
         data = db.get_latest_factions_snapshot()
-    
+
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch factions and no cached data available")
+    raise HTTPException(
+        status_code=503, detail="Failed to fetch factions and no cached data available"
+    )
 
 
 # ========================
@@ -371,14 +374,16 @@ async def get_biomes():
     """Get all biomes (with cache fallback)"""
     # Try live API first
     data = scraper.get_biomes()
-    
+
     # Fallback to cache if live API fails
     if data is None:
         data = db.get_latest_biomes_snapshot()
-    
+
     if data is not None:
         return data
-    raise HTTPException(status_code=503, detail="Failed to fetch biomes and no cached data available")
+    raise HTTPException(
+        status_code=503, detail="Failed to fetch biomes and no cached data available"
+    )
 
 
 # ========================
@@ -395,7 +400,7 @@ async def health_check():
     return {
         "status": "healthy",
         "collector_running": collector.is_running,
-        "upstream_api": "online" if upstream_status else "offline"
+        "upstream_api": "online" if upstream_status else "offline",
     }
 
 

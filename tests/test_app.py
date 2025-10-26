@@ -44,7 +44,7 @@ class TestWarEndpoints:
     def test_get_war_status_success(self, mock_get, client):
         """Test getting war status successfully"""
         mock_get.return_value = {"war_id": 1, "status": "active"}
-        
+
         response = client.get("/api/war/status")
         assert response.status_code == 200
         data = response.json()
@@ -54,7 +54,7 @@ class TestWarEndpoints:
     def test_get_war_status_not_found(self, mock_get, client):
         """Test getting war status when none exists"""
         mock_get.return_value = None
-        
+
         response = client.get("/api/war/status")
         assert response.status_code == 404
 
@@ -64,7 +64,7 @@ class TestWarEndpoints:
         """Test refreshing war status successfully"""
         mock_scraper.return_value = {"war_id": 1}
         mock_save.return_value = True
-        
+
         response = client.post("/api/war/status/refresh")
         assert response.status_code == 200
 
@@ -72,7 +72,7 @@ class TestWarEndpoints:
     def test_refresh_war_status_failure(self, mock_scraper, client):
         """Test refreshing war status when API fails"""
         mock_scraper.return_value = None
-        
+
         response = client.post("/api/war/status/refresh")
         assert response.status_code == 500
 
@@ -84,7 +84,7 @@ class TestCampaignEndpoints:
     def test_get_campaigns_success(self, mock_scraper, client):
         """Test getting campaigns successfully"""
         mock_scraper.return_value = [{"id": 1, "planet": {"index": 5}}]
-        
+
         response = client.get("/api/campaigns")
         assert response.status_code == 200
         data = response.json()
@@ -96,7 +96,7 @@ class TestCampaignEndpoints:
         """Test campaigns cache fallback when API fails"""
         mock_scraper.return_value = None
         mock_cache.return_value = [{"id": 1, "cached": True}]
-        
+
         response = client.get("/api/campaigns")
         assert response.status_code == 200
         data = response.json()
@@ -108,7 +108,7 @@ class TestCampaignEndpoints:
         """Test campaigns when both API and cache fail"""
         mock_scraper.return_value = None
         mock_cache.return_value = None
-        
+
         response = client.get("/api/campaigns")
         assert response.status_code == 503
 
@@ -116,7 +116,7 @@ class TestCampaignEndpoints:
     def test_get_active_campaigns(self, mock_get, client):
         """Test getting active campaigns"""
         mock_get.return_value = [{"id": 1, "status": "active"}]
-        
+
         response = client.get("/api/campaigns/active")
         assert response.status_code == 200
 
@@ -128,7 +128,7 @@ class TestPlanetEndpoints:
     def test_get_planets_success(self, mock_scraper, client):
         """Test getting planets successfully"""
         mock_scraper.return_value = [{"index": 1, "name": "Planet 1"}]
-        
+
         response = client.get("/api/planets")
         assert response.status_code == 200
 
@@ -138,7 +138,7 @@ class TestPlanetEndpoints:
         """Test planets cache fallback"""
         mock_scraper.return_value = None
         mock_cache.return_value = [{"index": 1, "cached": True}]
-        
+
         response = client.get("/api/planets")
         assert response.status_code == 200
 
@@ -148,7 +148,7 @@ class TestPlanetEndpoints:
         """Test getting specific planet"""
         mock_scraper.return_value = {"index": 5, "name": "Test Planet"}
         mock_history.return_value = [{"index": 5, "name": "Test Planet"}]
-        
+
         response = client.get("/api/planets/5")
         # Either direct API or cache fallback should work
         assert response.status_code in [200, 503]
@@ -157,7 +157,7 @@ class TestPlanetEndpoints:
     def test_get_planet_history(self, mock_get, client):
         """Test getting planet history"""
         mock_get.return_value = [{"index": 5, "timestamp": "2024-01-01"}]
-        
+
         response = client.get("/api/planets/5/history")
         assert response.status_code == 200
 
@@ -169,7 +169,7 @@ class TestStatisticsEndpoints:
     def test_get_statistics_success(self, mock_get, client):
         """Test getting statistics successfully"""
         mock_get.return_value = {"total_players": 1000}
-        
+
         response = client.get("/api/statistics")
         assert response.status_code == 200
 
@@ -177,7 +177,7 @@ class TestStatisticsEndpoints:
     def test_get_statistics_not_found(self, mock_get, client):
         """Test getting statistics when none exists"""
         mock_get.return_value = None
-        
+
         response = client.get("/api/statistics")
         assert response.status_code == 404
 
@@ -185,7 +185,7 @@ class TestStatisticsEndpoints:
     def test_get_statistics_history(self, mock_get, client):
         """Test getting statistics history"""
         mock_get.return_value = [{"total_players": 1000}]
-        
+
         response = client.get("/api/statistics/history")
         assert response.status_code == 200
 
@@ -197,7 +197,7 @@ class TestFactionEndpoints:
     def test_get_factions_success(self, mock_scraper, client):
         """Test getting factions successfully"""
         mock_scraper.return_value = [{"id": 1, "name": "Terminids"}]
-        
+
         response = client.get("/api/factions")
         assert response.status_code == 200
 
@@ -207,7 +207,7 @@ class TestFactionEndpoints:
         """Test factions cache fallback"""
         mock_scraper.return_value = None
         mock_cache.return_value = [{"id": 1, "cached": True}]
-        
+
         response = client.get("/api/factions")
         assert response.status_code == 200
 
@@ -219,7 +219,7 @@ class TestBiomeEndpoints:
     def test_get_biomes_success(self, mock_scraper, client):
         """Test getting biomes successfully"""
         mock_scraper.return_value = [{"name": "Desert"}]
-        
+
         response = client.get("/api/biomes")
         assert response.status_code == 200
 
@@ -229,7 +229,7 @@ class TestBiomeEndpoints:
         """Test biomes cache fallback"""
         mock_scraper.return_value = None
         mock_cache.return_value = [{"name": "Ice"}]
-        
+
         response = client.get("/api/biomes")
         assert response.status_code == 200
 
@@ -241,7 +241,7 @@ class TestAssignmentEndpoints:
     def test_get_assignments_success(self, mock_get, client):
         """Test getting assignments successfully"""
         mock_get.return_value = [{"id": 1, "title": "Major Order"}]
-        
+
         response = client.get("/api/assignments")
         assert response.status_code == 200
 
@@ -249,7 +249,7 @@ class TestAssignmentEndpoints:
     def test_get_assignments_with_limit(self, mock_get, client):
         """Test getting assignments with limit parameter"""
         mock_get.return_value = [{"id": 1}, {"id": 2}]
-        
+
         response = client.get("/api/assignments?limit=2")
         assert response.status_code == 200
 
@@ -259,7 +259,7 @@ class TestAssignmentEndpoints:
         """Test refreshing assignments"""
         mock_scraper.return_value = [{"id": 1}]
         mock_save.return_value = True
-        
+
         response = client.post("/api/assignments/refresh")
         assert response.status_code == 200
 
@@ -271,7 +271,7 @@ class TestDispatchEndpoints:
     def test_get_dispatches_success(self, mock_get, client):
         """Test getting dispatches successfully"""
         mock_get.return_value = [{"id": 1, "message": "News"}]
-        
+
         response = client.get("/api/dispatches")
         assert response.status_code == 200
 
@@ -281,7 +281,7 @@ class TestDispatchEndpoints:
         """Test refreshing dispatches"""
         mock_scraper.return_value = [{"id": 1}]
         mock_save.return_value = True
-        
+
         response = client.post("/api/dispatches/refresh")
         assert response.status_code == 200
 
@@ -293,7 +293,7 @@ class TestPlanetEventEndpoints:
     def test_get_planet_events_success(self, mock_get, client):
         """Test getting planet events successfully"""
         mock_get.return_value = [{"id": 1, "planetIndex": 5}]
-        
+
         response = client.get("/api/planet-events")
         assert response.status_code == 200
 
@@ -303,7 +303,7 @@ class TestPlanetEventEndpoints:
         """Test refreshing planet events"""
         mock_scraper.return_value = [{"id": 1}]
         mock_save.return_value = True
-        
+
         response = client.post("/api/planet-events/refresh")
         assert response.status_code == 200
 
@@ -315,7 +315,7 @@ class TestErrorHandling:
     def test_get_assignments_empty(self, mock_get, client):
         """Test getting assignments when database returns empty list"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/assignments")
         # Empty list should return 404
         assert response.status_code in [200, 404]
@@ -324,7 +324,7 @@ class TestErrorHandling:
     def test_get_dispatches_empty(self, mock_get, client):
         """Test getting dispatches when database returns empty list"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/dispatches")
         assert response.status_code in [200, 404]
 
@@ -332,7 +332,7 @@ class TestErrorHandling:
     def test_get_planet_events_empty(self, mock_get, client):
         """Test getting planet events when database returns empty list"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/planet-events")
         assert response.status_code in [200, 404]
 
@@ -340,7 +340,7 @@ class TestErrorHandling:
     def test_get_active_campaigns_empty(self, mock_get, client):
         """Test getting active campaigns when none exist"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/campaigns/active")
         assert response.status_code in [200, 404]
 
@@ -348,7 +348,7 @@ class TestErrorHandling:
     def test_get_planet_history_empty(self, mock_get, client):
         """Test getting planet history when none exists"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/planets/1/history")
         assert response.status_code in [200, 404]
 
@@ -356,6 +356,6 @@ class TestErrorHandling:
     def test_get_statistics_history_empty(self, mock_get, client):
         """Test getting statistics history when none exists"""
         mock_get.return_value = []
-        
+
         response = client.get("/api/statistics/history")
         assert response.status_code in [200, 404]

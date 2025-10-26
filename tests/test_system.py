@@ -6,9 +6,7 @@ Tests API health, documentation endpoints, and system status.
 
 import requests
 from unittest.mock import patch, MagicMock
-from tests.conftest import (
-    API_BASE, print_header, print_success, print_info, pretty_print_json
-)
+from tests.conftest import API_BASE, print_header, print_success, print_info, pretty_print_json
 
 
 @patch("requests.get")
@@ -19,7 +17,7 @@ def test_health(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"status": "operational", "collector_running": True}
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/health")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     data = response.json()
@@ -36,7 +34,7 @@ def test_root(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"message": "Hell Divers 2 API", "version": "1.0.0"}
     mock_get.return_value = mock_response
-    
+
     response = requests.get("http://localhost:5000/")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     pretty_print_json(response.json())
@@ -50,7 +48,7 @@ def test_docs(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {"openapi": "3.0.0", "info": {"title": "Hell Divers 2 API"}}
     mock_get.return_value = mock_response
-    
+
     response = requests.get("http://localhost:5000/openapi.json")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     print_success("OpenAPI schema is available")

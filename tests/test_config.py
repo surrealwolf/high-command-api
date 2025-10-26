@@ -30,6 +30,7 @@ class TestConfig:
         # Reload config to pick up environment variable
         from importlib import reload
         from src import config
+
         reload(config)
         assert config.Config.DATABASE_URL == "sqlite:///custom.db"
 
@@ -38,6 +39,7 @@ class TestConfig:
         """Test log level from environment"""
         from importlib import reload
         from src import config
+
         reload(config)
         assert config.Config.LOG_LEVEL == "DEBUG"
 
@@ -88,12 +90,14 @@ class TestConfigMapping:
     def test_config_mapping_exists(self):
         """Test configuration mapping dictionary exists"""
         from src.config import config
+
         assert config is not None
         assert isinstance(config, dict)
 
     def test_config_mapping_keys(self):
         """Test configuration mapping has expected keys"""
         from src.config import config
+
         assert "development" in config
         assert "production" in config
         assert "testing" in config
@@ -105,6 +109,7 @@ class TestConfigMapping:
         from src.config import DevelopmentConfig as DevConfig
         from src.config import ProductionConfig as ProdConfig
         from src.config import TestingConfig as TestConfig
+
         assert config["development"] == DevConfig
         assert config["production"] == ProdConfig
         assert config["testing"] == TestConfig
