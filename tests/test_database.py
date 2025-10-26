@@ -19,9 +19,13 @@ def temp_db():
     os.close(fd)
     db = Database(db_path=path)
     yield db
+    # Explicitly delete the database object to close all connections
+    del db
+    # Try to clean up, but don't fail if file is locked on Windows
     try:
         os.unlink(path)
-    except OSError:
+    except (OSError, PermissionError):
+        # File may be locked on Windows, ignore cleanup errors
         pass
 
 
@@ -34,9 +38,19 @@ class TestDatabaseInit:
         os.close(fd)
         os.unlink(path)
         
-        Database(db_path=path)
+        db = Database(db_path=path)
         assert os.path.exists(path)
-        os.unlink(path)
+        
+        # Ensure all connections are closed before cleanup
+        # On Windows, files may still be locked even after context manager exits
+        del db
+        
+        # Retry cleanup with error handling for Windows file locking
+        try:
+            os.unlink(path)
+        except (OSError, PermissionError):
+            # File may be locked on Windows, ignore cleanup errors in tests
+            pass
 
     def test_init_creates_tables(self, temp_db):
         """Test database initialization creates all tables"""
