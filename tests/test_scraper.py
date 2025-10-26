@@ -88,18 +88,18 @@ class TestFetchWithBackoff:
     @patch("requests.Session.get")
     def test_fetch_429_retry(self, mock_get):
         """Test 429 error triggers retry with backoff"""
+        # First call returns 429 error
         mock_response_429 = MagicMock()
         mock_response_429.status_code = 429
         mock_response_429.raise_for_status.side_effect = requests.HTTPError(response=mock_response_429)
         
+        # Second call succeeds
         mock_response_success = MagicMock()
         mock_response_success.json.return_value = {"data": "test"}
         mock_response_success.status_code = 200
         
-        mock_get.side_effect = [
-            requests.HTTPError(response=mock_response_429),
-            mock_response_success
-        ]
+        # Return response objects, let raise_for_status handle the exception
+        mock_get.side_effect = [mock_response_429, mock_response_success]
         
         scraper = HellDivers2Scraper()
         scraper.last_request_time = time.time() - 10
