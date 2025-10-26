@@ -6,9 +6,7 @@ Tests planets, factions, biomes endpoints and static world data.
 
 import requests
 from unittest.mock import patch, MagicMock
-from tests.conftest import (
-    API_BASE, print_header, print_info, print_success, pretty_print_json
-)
+from tests.conftest import API_BASE, print_header, print_info, print_success, pretty_print_json
 
 
 @patch("requests.get")
@@ -19,10 +17,10 @@ def test_planets(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = [
         {"planet_index": 0, "name": "Malevelon Creek", "biome": {"name": "Swamp"}, "players": 100},
-        {"planet_index": 1, "name": "Meridian", "biome": {"name": "Desert"}, "players": 80}
+        {"planet_index": 1, "name": "Meridian", "biome": {"name": "Desert"}, "players": 80},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/planets")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -46,10 +44,10 @@ def test_factions(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = [
         {"id": 1, "name": "Humans", "controlled": 50},
-        {"id": 2, "name": "Bugs", "controlled": 30}
+        {"id": 2, "name": "Bugs", "controlled": 30},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/factions")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -71,10 +69,10 @@ def test_biomes(mock_get):
     mock_response.json.return_value = [
         {"id": 1, "name": "Swamp"},
         {"id": 2, "name": "Desert"},
-        {"id": 3, "name": "Frozen"}
+        {"id": 3, "name": "Frozen"},
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/biomes")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:

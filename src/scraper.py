@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class HellDivers2Scraper:
     """Scraper for Hell Divers 2 game data via community API (api.helldivers2.dev)
-    
+
     Rate limiting: 5 requests per 10 seconds (2.0 seconds between requests enforced)
     """
 
@@ -18,7 +18,7 @@ class HellDivers2Scraper:
         self.timeout = timeout
         # Use provided URL or config URL
         self.base_url = base_url or Config.HELLDIVERS_API_BASE
-        
+
         # Rate limiting: delay between requests (2 seconds for 5 requests in 10 seconds)
         self.request_delay = 2.0
         # Initialize to current time to allow first request immediately
@@ -47,7 +47,7 @@ class HellDivers2Scraper:
             }
         )
         logger.info(f"HellDivers2Scraper initialized with base_url: {self.base_url}")
-    
+
     def _rate_limit(self):
         """Enforce rate limiting between requests (thread-safe)"""
         with self._rate_limit_lock:
@@ -58,17 +58,19 @@ class HellDivers2Scraper:
                 time.sleep(delay)
             self.last_request_time = time.time()
 
-    def _fetch_with_backoff(self, url: str, max_retries: int = 5) -> Optional[Union[Dict, List[Dict]]]:
+    def _fetch_with_backoff(
+        self, url: str, max_retries: int = 5
+    ) -> Optional[Union[Dict, List[Dict]]]:
         """Fetch URL with exponential backoff on 429 errors
-        
+
         Rate limiting is applied once before the first request.
         Exponential backoff handles retry delays independently.
-        
+
         Returns either a dict or list depending on the endpoint.
         """
         # Apply rate limiting once before first request attempt
         self._rate_limit()
-        
+
         for attempt in range(max_retries):
             try:
                 response = self.session.get(url, timeout=self.timeout)
@@ -79,7 +81,7 @@ class HellDivers2Scraper:
                     if attempt < max_retries - 1:
                         # Exponential backoff: 5s, 10s, 20s, 40s, 80s
                         # Aligns with API's 10-second rate limit window
-                        backoff_delay = (2 ** attempt) * 5
+                        backoff_delay = (2**attempt) * 5
                         logger.warning(
                             f"Rate limited (429). Attempt {attempt + 1}/{max_retries}. "
                             f"Backing off for {backoff_delay}s before retry..."
@@ -174,7 +176,9 @@ class HellDivers2Scraper:
         if result is None:
             return None
         if not isinstance(result, list):
-            logger.warning(f"Expected list from planet-events endpoint, got {type(result).__name__}")
+            logger.warning(
+                f"Expected list from planet-events endpoint, got {type(result).__name__}"
+            )
             return None
         return result
 

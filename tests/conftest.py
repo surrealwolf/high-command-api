@@ -11,6 +11,7 @@ API_BASE = "http://localhost:5000/api"
 
 class Colors:
     """ANSI color codes for terminal output"""
+
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     CYAN = "\033[96m"

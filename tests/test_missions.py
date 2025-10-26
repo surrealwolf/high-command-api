@@ -6,9 +6,7 @@ Tests assignments (major orders), dispatches (news), and planet events endpoints
 
 import requests
 from unittest.mock import patch, MagicMock
-from tests.conftest import (
-    API_BASE, print_header, print_info, print_success, pretty_print_json
-)
+from tests.conftest import API_BASE, print_header, print_info, print_success, pretty_print_json
 
 
 @patch("requests.get")
@@ -23,18 +21,18 @@ def test_assignments(mock_get):
             "title": "Defend Meridian",
             "description": "Hold the line",
             "reward": 1000,
-            "progress": 50
+            "progress": 50,
         },
         {
             "id": 2,
             "title": "Eliminate Bugs",
             "description": "Clear the infestation",
             "reward": 2000,
-            "progress": 75
-        }
+            "progress": 75,
+        },
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/assignments?limit=10")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -58,7 +56,7 @@ def test_refresh_assignments(mock_post):
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "data": []}
     mock_post.return_value = mock_response
-    
+
     response = requests.post(f"{API_BASE}/assignments/refresh")
     assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
     if response.status_code == 200:
@@ -78,17 +76,17 @@ def test_dispatches(mock_get):
             "id": 1,
             "title": "New Season",
             "description": "Season 12 has started",
-            "timestamp": 1700000000
+            "timestamp": 1700000000,
         },
         {
             "id": 2,
             "title": "Patch Notes",
             "description": "Balance changes deployed",
-            "timestamp": 1699900000
-        }
+            "timestamp": 1699900000,
+        },
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/dispatches?limit=10")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -112,7 +110,7 @@ def test_refresh_dispatches(mock_post):
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "data": []}
     mock_post.return_value = mock_response
-    
+
     response = requests.post(f"{API_BASE}/dispatches/refresh")
     assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
     if response.status_code == 200:
@@ -133,18 +131,18 @@ def test_planet_events(mock_get):
             "planetIndex": 42,
             "eventType": "storm",
             "startTime": 1700000000,
-            "endTime": 1700086400
+            "endTime": 1700086400,
         },
         {
             "id": 2,
             "planetIndex": 85,
             "eventType": "meteor",
             "startTime": 1699950000,
-            "endTime": 1700036400
-        }
+            "endTime": 1700036400,
+        },
     ]
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/planet-events?limit=10")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -153,7 +151,9 @@ def test_planet_events(mock_get):
         if isinstance(data, list):
             print_info(f"Total planet events: {len(data)}")
             if data:
-                print_info(f"Sample event: {data[0].get('eventType', 'Unknown')} on planet {data[0].get('planetIndex', '?')}")
+                print_info(
+                    f"Sample event: {data[0].get('eventType', 'Unknown')} on planet {data[0].get('planetIndex', '?')}"
+                )
         else:
             pretty_print_json(data)
     else:
@@ -168,7 +168,7 @@ def test_refresh_planet_events(mock_post):
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "data": []}
     mock_post.return_value = mock_response
-    
+
     response = requests.post(f"{API_BASE}/planet-events/refresh")
     assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
     if response.status_code == 200:

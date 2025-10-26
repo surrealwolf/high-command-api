@@ -128,10 +128,18 @@ class Database:
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_planet_index ON planet_status(planet_index)"
             )
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_timestamp ON dispatches(timestamp)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_timestamp ON planet_events(timestamp)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_system_status_key ON system_status(status_key)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_assignment_timestamp ON assignments(timestamp)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_dispatch_timestamp ON dispatches(timestamp)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_event_timestamp ON planet_events(timestamp)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_system_status_key ON system_status(status_key)"
+            )
 
             conn.commit()
 
@@ -376,7 +384,7 @@ class Database:
 
     def get_latest_planets_snapshot(self) -> Optional[List[Dict]]:
         """Get most recent cached snapshot of all planets
-        
+
         Used as fallback when live API is unavailable.
         Returns all planet status records from the most recent collection cycle.
         """
@@ -384,14 +392,16 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 # Get the most recent timestamp from planet_status
-                cursor.execute("SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1")
+                cursor.execute(
+                    "SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1"
+                )
                 result = cursor.fetchone()
-                
+
                 if not result:
                     return None
-                
+
                 latest_timestamp = result[0]
-                
+
                 # Get all planets from that timestamp
                 cursor.execute(
                     "SELECT data FROM planet_status WHERE timestamp = ? ORDER BY planet_index ASC",
@@ -405,7 +415,7 @@ class Database:
 
     def get_latest_campaigns_snapshot(self) -> Optional[List[Dict]]:
         """Get most recent cached snapshot of all campaigns
-        
+
         Used as fallback when live API is unavailable.
         Returns most recent campaign data for each campaign.
         """
@@ -428,7 +438,7 @@ class Database:
 
     def get_latest_factions_snapshot(self) -> Optional[List[Dict]]:
         """Get most recent cached snapshot of all factions
-        
+
         Used as fallback when live API is unavailable.
         Factions are extracted from war status data.
         """
@@ -437,10 +447,10 @@ class Database:
                 cursor = conn.cursor()
                 cursor.execute("SELECT data FROM war_status ORDER BY timestamp DESC LIMIT 1")
                 result = cursor.fetchone()
-                
+
                 if not result:
                     return None
-                
+
                 war_data = json.loads(result[0])
                 return war_data.get("factions", None)
         except Exception as e:
@@ -449,7 +459,7 @@ class Database:
 
     def get_latest_biomes_snapshot(self) -> Optional[List[Dict]]:
         """Get most recent cached snapshot of all biomes
-        
+
         Used as fallback when live API is unavailable.
         Biomes are extracted from planet data.
         """
@@ -457,24 +467,26 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 # Get the most recent timestamp from planet_status
-                cursor.execute("SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1")
+                cursor.execute(
+                    "SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1"
+                )
                 result = cursor.fetchone()
-                
+
                 if not result:
                     return None
-                
+
                 latest_timestamp = result[0]
-                
+
                 # Get all planets from that timestamp and extract unique biomes
                 cursor.execute(
                     "SELECT data FROM planet_status WHERE timestamp = ?",
                     (latest_timestamp,),
                 )
                 results = cursor.fetchall()
-                
+
                 if not results:
                     return None
-                
+
                 # Extract unique biomes from planets
                 biomes = {}
                 for row in results:
@@ -484,7 +496,7 @@ class Database:
                         biome_name = planet_data["biome"].get("name")
                         if biome_name and biome_name not in biomes:
                             biomes[biome_name] = planet_data["biome"]
-                
+
                 return list(biomes.values()) if biomes else None
         except Exception as e:
             logger.error(f"Failed to get latest biomes snapshot: {e}")
@@ -517,10 +529,10 @@ class Database:
                        WHERE status_key = 'upstream_api_available' LIMIT 1"""
                 )
                 result = cursor.fetchone()
-                
+
                 if result:
                     return bool(result[0])
-                
+
                 # Default to True if no status data found
                 return True
         except Exception as e:

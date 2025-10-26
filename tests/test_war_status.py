@@ -6,9 +6,7 @@ Tests war status endpoints and manual refresh capabilities.
 
 import requests
 from unittest.mock import patch, MagicMock
-from tests.conftest import (
-    API_BASE, print_header, print_info, print_success, pretty_print_json
-)
+from tests.conftest import API_BASE, print_header, print_info, print_success, pretty_print_json
 
 
 @patch("requests.get")
@@ -22,10 +20,10 @@ def test_war_status(mock_get):
         "statistics": {"players": 50000, "missions": 1000000},
         "factions": [{"name": "Humans", "controlled": 50}],
         "currently_attacking": [1, 2, 3],
-        "planet_events": []
+        "planet_events": [],
     }
     mock_get.return_value = mock_response
-    
+
     response = requests.get(f"{API_BASE}/war/status")
     assert response.status_code in (200, 404), f"Expected 200 or 404, got {response.status_code}"
     if response.status_code == 200:
@@ -43,10 +41,10 @@ def test_refresh_war_status(mock_post):
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "message": "War Status refreshed"}
     mock_post.return_value = mock_response
-    
+
     endpoint_path = "/war/status/refresh"
     endpoint_name = "War Status"
-    
+
     response = requests.post(f"{API_BASE}{endpoint_path}")
     assert response.status_code in (200, 500), f"Expected 200 or 500, got {response.status_code}"
     if response.status_code == 200:
