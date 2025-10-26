@@ -1,6 +1,7 @@
 import json
 import logging
 import sqlite3
+from datetime import datetime
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -189,8 +190,18 @@ class Database:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Campaigns from the API are active by definition
-                status = "active"
+                # Check if campaign has expired
+                expiration_time = data.get("expiresAt")
+                if expiration_time:
+                    try:
+                        # Parse ISO 8601 format (e.g., "2025-10-26T12:00:00Z")
+                        exp_dt = datetime.fromisoformat(expiration_time.replace('Z', '+00:00'))
+                        now = datetime.now(exp_dt.tzinfo) if exp_dt.tzinfo else datetime.now()
+                        status = "active" if now < exp_dt else "expired"
+                    except Exception:
+                        status = "active"  # Default to active if parsing fails
+                else:
+                    status = "active"
 
                 cursor.execute(
                     "INSERT OR REPLACE INTO campaigns (campaign_id, planet_index, status, data) VALUES (?, ?, ?, ?)",
@@ -243,20 +254,6 @@ class Database:
             logger.error(f"Failed to get planet status: {e}")
             return None
 
-    def get_latest_campaigns_snapshot(self) -> Optional[List[Dict]]:
-        """Get latest campaigns snapshot from cache"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT DISTINCT data FROM campaigns ORDER BY timestamp DESC LIMIT 50"
-                )
-                results = cursor.fetchall()
-                return [json.loads(row[0]) for row in results] if results else None
-        except Exception as e:
-            logger.error(f"Failed to get campaigns snapshot: {e}")
-            return None
-
     def get_active_campaigns(self) -> List[Dict]:
         """Get all active campaigns"""
         try:
@@ -267,7 +264,28 @@ class Database:
                     ("active",),
                 )
                 results = cursor.fetchall()
-                return [json.loads(row[0]) for row in results]
+                campaigns = [json.loads(row[0]) for row in results]
+                
+                # Filter out expired campaigns based on current time
+                active_campaigns = []
+                now = datetime.now()
+                for campaign in campaigns:
+                    expiration_time = campaign.get("expiresAt")
+                    if expiration_time:
+                        try:
+                            exp_dt = datetime.fromisoformat(expiration_time.replace('Z', '+00:00'))
+                            # Convert to naive datetime for comparison if needed
+                            if exp_dt.tzinfo:
+                                exp_dt = exp_dt.replace(tzinfo=None)
+                            if now < exp_dt:
+                                active_campaigns.append(campaign)
+                        except Exception:
+                            # If parsing fails, include the campaign
+                            active_campaigns.append(campaign)
+                    else:
+                        active_campaigns.append(campaign)
+                
+                return active_campaigns
         except Exception as e:
             logger.error(f"Failed to get active campaigns: {e}")
             return []
@@ -286,6 +304,10 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get assignments: {e}")
             return []
+
+    def get_latest_assignments(self, limit: int = 10) -> List[Dict]:
+        """Get latest assignments (alias for get_assignment)"""
+        return self.get_assignment(limit)
 
     def save_assignment(self, assignment_id: int, data: Dict) -> bool:
         """Save assignment to database"""
@@ -332,6 +354,46 @@ class Database:
             logger.error(f"Failed to get dispatches: {e}")
             return []
 
+    def get_latest_dispatches(self, limit: int = 10) -> List[Dict]:
+        """Get latest dispatches (alias for get_dispatches)"""
+        return self.get_dispatches(limit)
+
+    def save_assignments(self, data: List[Dict]) -> bool:
+        """Save assignments (Major Orders) to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for assignment in data:
+                    assignment_id = assignment.get("id")
+                    if assignment_id:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO assignments (assignment_id, data) VALUES (?, ?)",
+                            (assignment_id, json.dumps(assignment)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save assignments: {e}")
+            return False
+
+    def save_dispatches(self, data: List[Dict]) -> bool:
+        """Save dispatches (news/announcements) to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for dispatch in data:
+                    dispatch_id = dispatch.get("id")
+                    if dispatch_id:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO dispatches (dispatch_id, data) VALUES (?, ?)",
+                            (dispatch_id, json.dumps(dispatch)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save dispatches: {e}")
+            return False
+
     def save_planet_event(self, event_id: int, planet_index: int, event_type: str, data: Dict) -> bool:
         """Save planet event to database"""
         try:
@@ -347,6 +409,26 @@ class Database:
             logger.error(f"Failed to save planet event: {e}")
             return False
 
+    def save_planet_events(self, data: List[Dict]) -> bool:
+        """Save planet events to database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for event in data:
+                    event_id = event.get("id")
+                    # Support both snake_case and camelCase for planet_index
+                    planet_index = event.get("planet_index") or event.get("planetIndex")
+                    event_type = event.get("event_type") or event.get("eventType", "unknown")
+                    if event_id and planet_index:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO planet_events (event_id, planet_index, event_type, data) VALUES (?, ?, ?, ?)",
+                            (event_id, planet_index, event_type, json.dumps(event)),
+                        )
+                conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save planet events: {e}")
+            return False
     def get_planet_events(
         self, planet_index: Optional[int] = None, limit: int = 10
     ) -> List[Dict]:
@@ -369,6 +451,160 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get planet events: {e}")
             return []
+
+    def get_latest_planet_events(self, limit: int = 10) -> List[Dict]:
+        """Get latest planet events (alias for get_planet_events with no planet_index filter)"""
+        return self.get_planet_events(limit=limit)
+
+    def get_planet_status_history(self, planet_index: int, limit: int = 10) -> List[Dict]:
+        """Get status history for a planet"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data, timestamp FROM planet_status WHERE planet_index = ? ORDER BY timestamp DESC LIMIT ?",
+                    (planet_index, limit),
+                )
+                results = cursor.fetchall()
+                return [{"data": json.loads(row[0]), "timestamp": row[1]} for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get planet status history: {e}")
+            return []
+
+    def get_statistics_history(self, limit: int = 100) -> List[Dict]:
+        """Get statistics history"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT data, timestamp FROM statistics ORDER BY timestamp DESC LIMIT ?",
+                    (limit,),
+                )
+                results = cursor.fetchall()
+                return [{"data": json.loads(row[0]), "timestamp": row[1]} for row in results]
+        except Exception as e:
+            logger.error(f"Failed to get statistics history: {e}")
+            return []
+
+    def get_latest_planets_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all planets
+
+        Used as fallback when live API is unavailable.
+        Returns all planet status records from the most recent collection cycle.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent timestamp from planet_status
+                cursor.execute(
+                    "SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1"
+                )
+                result = cursor.fetchone()
+
+                if not result:
+                    return None
+
+                latest_timestamp = result[0]
+
+                # Get all planets from that timestamp
+                cursor.execute(
+                    "SELECT data FROM planet_status WHERE timestamp = ? ORDER BY planet_index ASC",
+                    (latest_timestamp,),
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results] if results else None
+        except Exception as e:
+            logger.error(f"Failed to get latest planets snapshot: {e}")
+            return None
+
+    def get_latest_campaigns_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all campaigns
+
+        Used as fallback when live API is unavailable.
+        Returns most recent campaign data for each campaign.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent campaign data for each campaign_id
+                cursor.execute(
+                    """SELECT data FROM campaigns 
+                       WHERE (campaign_id, timestamp) IN (
+                           SELECT campaign_id, MAX(timestamp) FROM campaigns GROUP BY campaign_id
+                       )
+                       ORDER BY timestamp DESC"""
+                )
+                results = cursor.fetchall()
+                return [json.loads(row[0]) for row in results] if results else None
+        except Exception as e:
+            logger.error(f"Failed to get latest campaigns snapshot: {e}")
+            return None
+
+    def get_latest_factions_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all factions
+
+        Used as fallback when live API is unavailable.
+        Factions are extracted from war status data.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT data FROM war_status ORDER BY timestamp DESC LIMIT 1")
+                result = cursor.fetchone()
+
+                if not result:
+                    return None
+
+                war_data = json.loads(result[0])
+                return war_data.get("factions", None)
+        except Exception as e:
+            logger.error(f"Failed to get latest factions snapshot: {e}")
+            return None
+
+    def get_latest_biomes_snapshot(self) -> Optional[List[Dict]]:
+        """Get most recent cached snapshot of all biomes
+
+        Used as fallback when live API is unavailable.
+        Biomes are extracted from planet data.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Get the most recent timestamp from planet_status
+                cursor.execute(
+                    "SELECT DISTINCT timestamp FROM planet_status ORDER BY timestamp DESC LIMIT 1"
+                )
+                result = cursor.fetchone()
+
+                if not result:
+                    return None
+
+                latest_timestamp = result[0]
+
+                # Get all planets from that timestamp and extract unique biomes
+                cursor.execute(
+                    "SELECT data FROM planet_status WHERE timestamp = ?",
+                    (latest_timestamp,),
+                )
+                results = cursor.fetchall()
+
+                if not results:
+                    return None
+
+                # Extract unique biomes from planets
+                biomes = {}
+                for row in results:
+                    planet_data = json.loads(row[0])
+                    # Type guard: check if biome is a dict before accessing .get()
+                    if "biome" in planet_data and isinstance(planet_data["biome"], dict):
+                        biome_name = planet_data["biome"].get("name")
+                        if biome_name and biome_name not in biomes:
+                            biomes[biome_name] = planet_data["biome"]
+
+                return list(biomes.values()) if biomes else None
+        except Exception as e:
+            logger.error(f"Failed to get latest biomes snapshot: {e}")
+            return None
 
     def update_system_status(self, key: str, value: str) -> bool:
         """Update system status"""
@@ -396,3 +632,12 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to get system status: {e}")
             return None
+
+    def set_upstream_status(self, available: bool) -> bool:
+        """Set upstream API availability status"""
+        return self.update_system_status("upstream_api_available", "true" if available else "false")
+
+    def get_upstream_status(self) -> bool:
+        """Get upstream API availability status"""
+        status = self.get_system_status("upstream_api_available")
+        return status == "true" if status else False
