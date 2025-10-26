@@ -286,11 +286,7 @@ async def get_planet_status(planet_index: int):
 
     # Fallback to cache if live API fails
     if data is None:
-        history = db.get_planet_status_history(planet_index, limit=1)
-        if history and isinstance(history[0], dict) and "data" in history[0]:
-            data = history[0]["data"]
-        elif history:
-            data = history[0]
+        data = db.get_planet_status(planet_index)
 
     if data is not None:
         return data
@@ -326,9 +322,10 @@ async def get_statistics():
 @app.get("/api/statistics/history", tags=["Statistics"])
 async def get_statistics_history(limit: int = Query(100, ge=1, le=1000)):
     """Get statistics history"""
-    data = db.get_statistics_history(limit)
+    # Since we only store latest statistics, return current in array format
+    data = db.get_latest_statistics()
     if data:
-        return data
+        return [data]
     raise HTTPException(status_code=404, detail="No statistics history available")
 
 
