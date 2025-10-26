@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from scraper import HellDivers2Scraper
 from database import Database
