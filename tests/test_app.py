@@ -181,10 +181,10 @@ class TestStatisticsEndpoints:
         response = client.get("/api/statistics")
         assert response.status_code == 404
 
-    @patch("src.app.db.get_statistics_history")
+    @patch("src.app.db.get_latest_statistics")
     def test_get_statistics_history(self, mock_get, client):
         """Test getting statistics history"""
-        mock_get.return_value = [{"total_players": 1000}]
+        mock_get.return_value = {"total_players": 1000}
 
         response = client.get("/api/statistics/history")
         assert response.status_code == 200
