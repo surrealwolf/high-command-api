@@ -6,7 +6,6 @@ Targets uncovered lines in database.py methods.
 
 import pytest
 import sqlite3
-import json
 import tempfile
 import os
 from datetime import datetime, timedelta
