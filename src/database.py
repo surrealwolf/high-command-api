@@ -353,16 +353,22 @@ class Database:
             return False
 
     def get_dispatches(self, limit: int = 10) -> List[Dict]:
-        """Get dispatches with optional limit"""
+        """Get dispatches with optional limit, sorted by published date (newest first)"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT data FROM dispatches ORDER BY timestamp DESC LIMIT ?",
-                    (limit,),
+                    "SELECT data FROM dispatches ORDER BY timestamp DESC",
+                    ()
                 )
                 results = cursor.fetchall()
-                return [json.loads(row[0]) for row in results]
+                # Parse and sort by published date from JSON data (newest first)
+                dispatches = [json.loads(row[0]) for row in results]
+                dispatches.sort(
+                    key=lambda x: x.get("published", ""),
+                    reverse=True
+                )
+                return dispatches[:limit]
         except Exception as e:
             logger.error(f"Failed to get dispatches: {e}")
             return []
