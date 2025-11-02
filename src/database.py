@@ -1,7 +1,7 @@
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -13,6 +13,26 @@ class Database:
     def __init__(self, db_path: str = "helldivers2.db"):
         self.db_path = db_path
         self._init_db()
+
+    @staticmethod
+    def _parse_expiration_time(expiration_time: str) -> Optional[datetime]:
+        """Parse ISO 8601 expiration time string and return as UTC datetime.
+        
+        Args:
+            expiration_time: ISO 8601 formatted string (e.g., "2025-10-26T12:00:00Z")
+            
+        Returns:
+            Timezone-aware datetime in UTC, or None if parsing fails
+        """
+        try:
+            # Parse ISO 8601 format, normalize 'Z' to UTC offset
+            dt = datetime.fromisoformat(expiration_time.replace('Z', '+00:00'))
+            # Ensure result is timezone-aware (UTC)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except (ValueError, AttributeError):
+            return None
 
     def _init_db(self):
         """Initialize database schema"""
@@ -46,7 +66,7 @@ class Database:
                 """
                 CREATE TABLE IF NOT EXISTS planet_status (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    planet_index INTEGER UNIQUE NOT NULL,
+                    planet_index INTEGER NOT NULL,
                     data TEXT NOT NULL,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -192,13 +212,13 @@ class Database:
                 cursor = conn.cursor()
                 # Check if campaign has expired
                 expiration_time = data.get("expiresAt")
+                status = "unknown"
                 if expiration_time:
-                    try:
-                        # Parse ISO 8601 format (e.g., "2025-10-26T12:00:00Z")
-                        exp_dt = datetime.fromisoformat(expiration_time.replace('Z', '+00:00'))
-                        now = datetime.now(exp_dt.tzinfo) if exp_dt.tzinfo else datetime.now()
+                    exp_dt = self._parse_expiration_time(expiration_time)
+                    if exp_dt:
+                        now = datetime.now(timezone.utc)
                         status = "active" if now < exp_dt else "expired"
-                    except Exception:
+                    else:
                         status = "active"  # Default to active if parsing fails
                 else:
                     status = "active"
@@ -266,21 +286,14 @@ class Database:
                 results = cursor.fetchall()
                 campaigns = [json.loads(row[0]) for row in results]
                 
-                # Filter out expired campaigns based on current time
+                # Filter campaigns to include only those not yet expired
                 active_campaigns = []
-                now = datetime.now()
+                now = datetime.now(timezone.utc)
                 for campaign in campaigns:
                     expiration_time = campaign.get("expiresAt")
                     if expiration_time:
-                        try:
-                            exp_dt = datetime.fromisoformat(expiration_time.replace('Z', '+00:00'))
-                            # Convert to naive datetime for comparison if needed
-                            if exp_dt.tzinfo:
-                                exp_dt = exp_dt.replace(tzinfo=None)
-                            if now < exp_dt:
-                                active_campaigns.append(campaign)
-                        except Exception:
-                            # If parsing fails, include the campaign
+                        exp_dt = self._parse_expiration_time(expiration_time)
+                        if exp_dt is None or now < exp_dt:
                             active_campaigns.append(campaign)
                     else:
                         active_campaigns.append(campaign)
@@ -416,9 +429,9 @@ class Database:
                 cursor = conn.cursor()
                 for event in data:
                     event_id = event.get("id")
-                    # Support both snake_case and camelCase for planet_index
-                    planet_index = event.get("planet_index") or event.get("planetIndex")
-                    event_type = event.get("event_type") or event.get("eventType", "unknown")
+                    # Support both snake_case and camelCase for planet_index, explicit None checks
+                    planet_index = event.get("planet_index") if "planet_index" in event else event.get("planetIndex")
+                    event_type = event.get("event_type") if "event_type" in event else event.get("eventType", "unknown")
                     if event_id and planet_index:
                         cursor.execute(
                             "INSERT OR REPLACE INTO planet_events (event_id, planet_index, event_type, data) VALUES (?, ?, ?, ?)",

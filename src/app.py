@@ -322,7 +322,7 @@ async def get_statistics():
 @app.get("/api/statistics/history", tags=["Statistics"])
 async def get_statistics_history(limit: int = Query(100, ge=1, le=1000)):
     """Get statistics history"""
-    # Since we only store latest statistics, return current in array format
+    # All statistics are stored with timestamps, but for API compatibility, return only the latest statistic in array format
     data = db.get_latest_statistics()
     if data:
         return [data]

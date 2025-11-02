@@ -8,7 +8,7 @@ import pytest
 import sqlite3
 import tempfile
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.database import Database
 
 
@@ -23,6 +23,7 @@ def temp_db():
     try:
         os.unlink(path)
     except (OSError, PermissionError):
+        # Ignore errors if the file was already deleted or is locked; not critical for test cleanup
         pass
 
 
@@ -31,7 +32,7 @@ class TestCampaignExpiration:
 
     def test_save_campaign_with_future_expiration(self, temp_db):
         """Test saving campaign with future expiration date"""
-        future_date = (datetime.now() + timedelta(days=1)).isoformat() + 'Z'
+        future_date = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         campaign_data = {
             "id": 1,
             "planet": {"index": 5},
@@ -45,7 +46,7 @@ class TestCampaignExpiration:
 
     def test_save_campaign_with_past_expiration(self, temp_db):
         """Test saving campaign with past expiration date"""
-        past_date = (datetime.now() - timedelta(days=1)).isoformat() + 'Z'
+        past_date = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         campaign_data = {
             "id": 1,
             "planet": {"index": 5},
@@ -84,7 +85,7 @@ class TestCampaignExpiration:
     def test_get_active_campaigns_filters_expired(self, temp_db):
         """Test that get_active_campaigns filters out expired campaigns"""
         # Add a future campaign
-        future_date = (datetime.now() + timedelta(days=1)).isoformat() + 'Z'
+        future_date = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         future_campaign = {
             "id": 1,
             "planet": {"index": 5},
@@ -93,7 +94,7 @@ class TestCampaignExpiration:
         temp_db.save_campaign(1, 5, future_campaign)
 
         # Add a past campaign
-        past_date = (datetime.now() - timedelta(days=1)).isoformat() + 'Z'
+        past_date = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         past_campaign = {
             "id": 2,
             "planet": {"index": 6},
